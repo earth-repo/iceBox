@@ -128,7 +128,7 @@ void updateFirebase() {
   String payload;
   serializeJson(doc, payload);
 
-  int httpCode = http.PUT(payload);
+  int httpCode = http.PATCH(payload);
 
   if (httpCode > 0) {
     Serial.printf("[FB] Updated OK (HTTP %d)\n", httpCode);

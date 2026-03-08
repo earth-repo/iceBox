@@ -97,7 +97,7 @@ def firebase_update():
     }
 
     try:
-        r = requests.put(url, json=data, timeout=5)
+        r = requests.patch(url, json=data, timeout=5)
         if r.status_code == 200:
             print(f"  ✅ Firebase อัปเดตสำเร็จ")
         else:

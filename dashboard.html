@@ -1349,17 +1349,20 @@
         }
 
         function formatDateLabel(key) {
+            const months = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
             if (currentTab === 'daily') {
-                // YYYY-MM-DD → DD/MM/YYYY (Thai-friendly format)
+                // YYYY-MM-DD → D เดือนไทย พ.ศ.
                 const [y, m, d] = key.split('-');
-                return `${d}/${m}/${y}`;
+                const buddhistYear = parseInt(y) + 543;
+                return `${parseInt(d)} ${months[parseInt(m)]} ${buddhistYear}`;
             } else if (currentTab === 'monthly') {
-                // YYYY-MM → month name
+                // YYYY-MM → เดือนไทย พ.ศ.
                 const [y, m] = key.split('-');
-                const months = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                return `${months[parseInt(m)]} ${y}`;
+                const buddhistYear = parseInt(y) + 543;
+                return `${months[parseInt(m)]} ${buddhistYear}`;
             } else {
-                return 'ปี ' + key;
+                // YYYY → พ.ศ. XXXX
+                return 'พ.ศ. ' + (parseInt(key) + 543);
             }
         }
 
