@@ -106,6 +106,7 @@ void updateFirebase() {
   leds["red"] = (boxStatus == 2) ? 1 : 0;
   leds["yellow"] = (boxStatus == 1) ? 1 : 0;
   leds["green"] = (boxStatus == 0) ? 1 : 0;
+  // leds["green"] = (boxStatus == 0 || boxStatus == 1) ? 1 : 0;
 
   // สร้าง timestamp
   doc["lastUpdate"] = millis() / 1000;
