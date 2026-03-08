@@ -90,7 +90,7 @@ def firebase_update():
         "leds": {
             "red": 1 if box_status == 2 else 0,
             "yellow": 1 if box_status == 1 else 0,
-            "green": 1 if box_status in (0, 1) else 0,
+            "green": 1 if box_status == 0 else 0,
         },
         "lastUpdate": int(time.time())
     }
