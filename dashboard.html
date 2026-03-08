@@ -688,12 +688,13 @@
             <div class="setting-row">
                 <label class="setting-label">Firebase Database URL</label>
                 <input type="text" class="setting-input" id="firebaseUrl"
-                    placeholder="https://your-project.firebaseio.com">
+                    value="https://boxparcel-default-rtdb.asia-southeast1.firebasedatabase.app"
+                    placeholder="https://your-project.firebasedatabase.app">
             </div>
             <div class="setting-row">
                 <label class="setting-label">API Key (ถ้ามี — ว่างได้ถ้า rules เปิด public)</label>
                 <input type="text" class="setting-input" id="firebaseKey"
-                    placeholder="ว่างได้ถ้า rules เปิด read: true">
+                    value="AIzaSyA-iVhr0jtymjAUTQdWPXX0ZqpU4XH8lvQ" placeholder="ว่างได้ถ้า rules เปิด read: true">
             </div>
             <button class="btn-connect" id="btnConnect" onclick="startMonitoring()">
                 เชื่อมต่อ Dashboard
@@ -748,9 +749,8 @@
             const savedKey = localStorage.getItem('fb_key');
             if (savedUrl) el.firebaseUrl.value = savedUrl;
             if (savedKey) el.firebaseKey.value = savedKey;
-            if (savedUrl) {
-                setTimeout(() => startMonitoring(), 500);
-            }
+            // เชื่อมต่ออัตโนมัติเมื่อเปิดหน้า
+            setTimeout(() => startMonitoring(), 500);
         })();
 
         // =============================================
