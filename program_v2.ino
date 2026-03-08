@@ -105,7 +105,7 @@ void updateFirebase() {
   JsonObject leds = doc["leds"].to<JsonObject>();
   leds["red"] = (boxStatus == 2) ? 1 : 0;
   leds["yellow"] = (boxStatus == 1) ? 1 : 0;
-  leds["green"] = (boxStatus == 0 || boxStatus == 1) ? 1 : 0;
+  leds["green"] = (boxStatus == 0) ? 1 : 0;
 
   // สร้าง timestamp
   doc["lastUpdate"] = millis() / 1000;
@@ -187,7 +187,7 @@ void updateLEDs() {
     red_off();
     break;
   case 1: // มีพัสดุ
-    green_on();
+    green_off();
     yellow_on();
     red_off();
     break;
