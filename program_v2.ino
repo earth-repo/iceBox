@@ -18,6 +18,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <time.h>
 
 // =============================================
 // Flash Memory (NVS) — เก็บค่าแม้ไฟดับ
@@ -168,6 +169,84 @@ void addFirebaseEvent(String icon, String text) {
 }
 
 // =============================================
+// NTP — ดึงวันที่จริง
+// =============================================
+String getDateString() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("[NTP] Failed to get time");
+    return "unknown";
+  }
+  char buf[11]; // YYYY-MM-DD
+  strftime(buf, sizeof(buf), "%Y-%m-%d", &timeinfo);
+  return String(buf);
+}
+
+// =============================================
+// สถิติรายวัน — อัปเดตไปที่ Firebase
+// =============================================
+void updateDailyStats(String eventType) {
+  if (WiFi.status() != WL_CONNECTED)
+    return;
+
+  String dateStr = getDateString();
+  if (dateStr == "unknown")
+    return;
+
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  // 1. อ่านค่าเดิม
+  HTTPClient http;
+  String url = "https://" + String(FIREBASE_HOST) + "/parcelBox/stats/daily/" +
+               dateStr + ".json?auth=" + String(FIREBASE_API_KEY);
+  http.begin(client, url);
+  int httpCode = http.GET();
+
+  int count = 0;
+  int resets = 0;
+
+  if (httpCode == 200) {
+    String payload = http.getString();
+    if (payload != "null") {
+      JsonDocument doc;
+      deserializeJson(doc, payload);
+      count = doc["count"] | 0;
+      resets = doc["resets"] | 0;
+    }
+  }
+  http.end();
+
+  // 2. Increment
+  if (eventType == "arrive") {
+    count++;
+  } else if (eventType == "reset") {
+    resets++;
+  }
+
+  // 3. เขียนกลับ
+  HTTPClient http2;
+  http2.begin(client, url);
+  http2.addHeader("Content-Type", "application/json");
+
+  JsonDocument doc2;
+  doc2["count"] = count;
+  doc2["resets"] = resets;
+
+  String body;
+  serializeJson(doc2, body);
+
+  int putCode = http2.PUT(body);
+  if (putCode > 0) {
+    Serial.printf("[STATS] %s updated (%s: count=%d, resets=%d)\n",
+                  dateStr.c_str(), eventType.c_str(), count, resets);
+  } else {
+    Serial.printf("[STATS] Error: %s\n", http2.errorToString(putCode).c_str());
+  }
+  http2.end();
+}
+
+// =============================================
 // ฟังก์ชัน LED (เดิมจาก v1)
 // =============================================
 void red_on() { digitalWrite(PIN_RED_LED, HIGH); }
@@ -315,6 +394,19 @@ void setup() {
   // เชื่อมต่อ WiFi
   connectWiFi();
 
+  // ตั้งเวลา NTP (ใช้ timezone ไทย UTC+7)
+  configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.println("[NTP] Syncing time...");
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo, 5000)) {
+    Serial.printf("[NTP] Time: %04d-%02d-%02d %02d:%02d:%02d\n",
+                  timeinfo.tm_year + 1900, timeinfo.tm_mon + 1,
+                  timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min,
+                  timeinfo.tm_sec);
+  } else {
+    Serial.println("[NTP] Time sync failed (will retry later)");
+  }
+
   // โหลดจำนวนพัสดุจาก Flash (กรณีไฟดับแล้วกลับมา)
   parcelCount = loadCountFromFlash();
   updateBoxStatus();
@@ -388,8 +480,9 @@ void loop() {
       }
       sendTelegram(msg);
 
-      // อัปเดต Firebase + Event
+      // อัปเดต Firebase + Event + Stats
       updateFirebase();
+      updateDailyStats("arrive");
       addFirebaseEvent("📦", "พัสดุมาส่ง (จำนวน: " + String(parcelCount) + " ชิ้น)");
     }
   }
@@ -432,6 +525,7 @@ void loop() {
       msg += "🟢 ตู้พร้อมรับพัสดุ";
       sendTelegram(msg);
 
+      updateDailyStats("reset");
       addFirebaseEvent("✅", "รีเซ็ต — รับพัสดุแล้ว");
 
       while (digitalRead(PIN_RESET_SW) == LOW) {

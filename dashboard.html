@@ -615,6 +615,208 @@
         .gauge-value.bump {
             transform: scale(1.15);
         }
+
+        /* =============================================
+           Stats Section
+           ============================================= */
+        .stats-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            margin-bottom: 1rem;
+        }
+
+        .stats-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .stats-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stats-tabs {
+            display: flex;
+            gap: 0.25rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 3px;
+        }
+
+        .stats-tab {
+            padding: 0.35rem 0.7rem;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .stats-tab.active {
+            background: var(--gradient-hero);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .stats-tab:hover:not(.active) {
+            color: var(--text-secondary);
+        }
+
+        .stats-filters {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .stats-filter-input {
+            flex: 1;
+            min-width: 110px;
+            padding: 0.4rem 0.6rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .stats-filter-input:focus {
+            outline: none;
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .stats-sort-btn {
+            padding: 0.4rem 0.7rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-card);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            white-space: nowrap;
+        }
+
+        .stats-sort-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .stats-sort-btn.active {
+            border-color: rgba(102, 126, 234, 0.5);
+            color: #667eea;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .stats-summary-item {
+            text-align: center;
+            padding: 0.6rem 0.3rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .stats-summary-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stats-summary-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.15rem;
+        }
+
+        .stats-table-wrap {
+            max-height: 260px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+
+        .stats-table th {
+            position: sticky;
+            top: 0;
+            background: var(--bg-primary);
+            padding: 0.5rem 0.4rem;
+            text-align: left;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-card);
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .stats-table th:hover {
+            color: var(--text-secondary);
+        }
+
+        .stats-table th.sorted {
+            color: #667eea;
+        }
+
+        .stats-table td {
+            padding: 0.5rem 0.4rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text-secondary);
+        }
+
+        .stats-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .stats-table .count-cell {
+            font-weight: 700;
+            color: var(--accent-yellow);
+        }
+
+        .stats-table .reset-cell {
+            color: var(--accent-green);
+        }
+
+        .stats-empty {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 
@@ -672,6 +874,58 @@
             </div>
         </div>
 
+        <!-- 📊 Stats Section -->
+        <div class="stats-card">
+            <div class="stats-header">
+                <span class="stats-title">📊 สถิติพัสดุ</span>
+                <div class="stats-tabs">
+                    <button class="stats-tab active" onclick="switchTab('daily')" id="tabDaily">รายวัน</button>
+                    <button class="stats-tab" onclick="switchTab('monthly')" id="tabMonthly">รายเดือน</button>
+                    <button class="stats-tab" onclick="switchTab('yearly')" id="tabYearly">รายปี</button>
+                </div>
+            </div>
+
+            <div class="stats-filters">
+                <input type="date" class="stats-filter-input" id="filterFrom" title="จากวันที่">
+                <input type="date" class="stats-filter-input" id="filterTo" title="ถึงวันที่">
+                <button class="stats-sort-btn" id="sortBtn" onclick="toggleSort()" title="เรียงลำดับ">
+                    📅 ใหม่→เก่า
+                </button>
+            </div>
+
+            <div class="stats-summary" id="statsSummary">
+                <div class="stats-summary-item">
+                    <div class="stats-summary-value" id="sumTotal">0</div>
+                    <div class="stats-summary-label">พัสดุทั้งหมด</div>
+                </div>
+                <div class="stats-summary-item">
+                    <div class="stats-summary-value" id="sumResets">0</div>
+                    <div class="stats-summary-label">รับพัสดุ (ครั้ง)</div>
+                </div>
+                <div class="stats-summary-item">
+                    <div class="stats-summary-value" id="sumDays">0</div>
+                    <div class="stats-summary-label" id="sumDaysLabel">วัน</div>
+                </div>
+            </div>
+
+            <div class="stats-table-wrap">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortBy('date')" id="thDate" class="sorted">วันที่ ↓</th>
+                            <th onclick="sortBy('count')" id="thCount">พัสดุ</th>
+                            <th onclick="sortBy('resets')" id="thResets">รับแล้ว</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statsBody">
+                        <tr>
+                            <td colspan="3" class="stats-empty">ยังไม่มีข้อมูลสถิติ</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Event Log -->
         <div class="log-card">
             <div class="log-header">
@@ -721,6 +975,12 @@
         let prevCount = -1;
         let prevStatus = -1;
 
+        // Stats state
+        let rawStatsData = {};  // { "YYYY-MM-DD": { count, resets } }
+        let currentTab = 'daily';
+        let statsSortField = 'date';
+        let statsSortAsc = false;  // false = newest first
+
         // =============================================
         // DOM Elements
         // =============================================
@@ -739,6 +999,15 @@
             firebaseUrl: document.getElementById('firebaseUrl'),
             firebaseKey: document.getElementById('firebaseKey'),
             btnConnect: document.getElementById('btnConnect'),
+            // Stats elements
+            filterFrom: document.getElementById('filterFrom'),
+            filterTo: document.getElementById('filterTo'),
+            sortBtn: document.getElementById('sortBtn'),
+            statsBody: document.getElementById('statsBody'),
+            sumTotal: document.getElementById('sumTotal'),
+            sumResets: document.getElementById('sumResets'),
+            sumDays: document.getElementById('sumDays'),
+            sumDaysLabel: document.getElementById('sumDaysLabel'),
         };
 
         // =============================================
@@ -848,10 +1117,18 @@
                 renderFirebaseEvents(events);
             });
 
+            // Listen to stats/daily
+            const statsRef = db.ref('parcelBox/stats/daily');
+            statsRef.on('value', (snapshot) => {
+                rawStatsData = snapshot.val() || {};
+                renderStats();
+            });
+
             // Store unsubscribe function
             unsubscribe = () => {
                 parcelRef.off();
                 eventsRef.off();
+                statsRef.off();
             };
         }
 
@@ -959,6 +1236,162 @@
             el.connMode.style.color = 'var(--accent-red)';
             el.btnConnect.textContent = 'ลองเชื่อมต่อใหม่';
             el.btnConnect.disabled = false;
+        }
+
+        // =============================================
+        // Stats Logic
+        // =============================================
+        // Filter listeners
+        el.filterFrom.addEventListener('change', renderStats);
+        el.filterTo.addEventListener('change', renderStats);
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.stats-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+
+            // Update header label for 3rd summary
+            const labels = { daily: 'วัน', monthly: 'เดือน', yearly: 'ปี' };
+            el.sumDaysLabel.textContent = labels[tab];
+
+            // Update date column header text
+            const dateLabels = { daily: 'วันที่', monthly: 'เดือน', yearly: 'ปี' };
+            updateThHeaders(dateLabels[tab]);
+
+            renderStats();
+        }
+
+        function toggleSort() {
+            statsSortAsc = !statsSortAsc;
+            el.sortBtn.textContent = statsSortAsc ? '📅 เก่า→ใหม่' : '📅 ใหม่→เก่า';
+            renderStats();
+        }
+
+        function sortBy(field) {
+            if (statsSortField === field) {
+                statsSortAsc = !statsSortAsc;
+            } else {
+                statsSortField = field;
+                statsSortAsc = field === 'date' ? false : true; // date default desc, numbers default desc(high first)
+            }
+            renderStats();
+        }
+
+        function updateThHeaders(dateLabel) {
+            const arrow = (field) => {
+                if (statsSortField !== field) return '';
+                return statsSortAsc ? ' ↑' : ' ↓';
+            };
+            document.getElementById('thDate').textContent = dateLabel + arrow('date');
+            document.getElementById('thDate').className = statsSortField === 'date' ? 'sorted' : '';
+            document.getElementById('thCount').textContent = 'พัสดุ' + arrow('count');
+            document.getElementById('thCount').className = statsSortField === 'count' ? 'sorted' : '';
+            document.getElementById('thResets').textContent = 'รับแล้ว' + arrow('resets');
+            document.getElementById('thResets').className = statsSortField === 'resets' ? 'sorted' : '';
+        }
+
+        function aggregateData() {
+            // daily data is raw
+            const entries = Object.entries(rawStatsData); // [ ["2026-03-08", {count,resets}], ... ]
+
+            if (currentTab === 'daily') {
+                return entries.map(([d, v]) => ({ key: d, count: v.count || 0, resets: v.resets || 0 }));
+            }
+
+            // aggregate
+            const map = {};
+            for (const [dateStr, val] of entries) {
+                let groupKey;
+                if (currentTab === 'monthly') {
+                    groupKey = dateStr.substring(0, 7); // YYYY-MM
+                } else {
+                    groupKey = dateStr.substring(0, 4); // YYYY
+                }
+                if (!map[groupKey]) map[groupKey] = { count: 0, resets: 0 };
+                map[groupKey].count += (val.count || 0);
+                map[groupKey].resets += (val.resets || 0);
+            }
+            return Object.entries(map).map(([k, v]) => ({ key: k, count: v.count, resets: v.resets }));
+        }
+
+        function filterData(data) {
+            const from = el.filterFrom.value;
+            const to = el.filterTo.value;
+            if (!from && !to) return data;
+
+            return data.filter(item => {
+                // Pad key for comparison: daily=YYYY-MM-DD, monthly=YYYY-MM, yearly=YYYY
+                const k = item.key;
+                if (from) {
+                    const fromCmp = from.substring(0, k.length);
+                    if (k < fromCmp) return false;
+                }
+                if (to) {
+                    const toCmp = to.substring(0, k.length);
+                    if (k > toCmp) return false;
+                }
+                return true;
+            });
+        }
+
+        function sortData(data) {
+            const field = statsSortField;
+            const asc = statsSortAsc;
+            return data.sort((a, b) => {
+                let cmp;
+                if (field === 'date') {
+                    cmp = a.key.localeCompare(b.key);
+                } else {
+                    cmp = (a[field] || 0) - (b[field] || 0);
+                }
+                return asc ? cmp : -cmp;
+            });
+        }
+
+        function formatDateLabel(key) {
+            if (currentTab === 'daily') {
+                // YYYY-MM-DD → DD/MM/YYYY (Thai-friendly format)
+                const [y, m, d] = key.split('-');
+                return `${d}/${m}/${y}`;
+            } else if (currentTab === 'monthly') {
+                // YYYY-MM → month name
+                const [y, m] = key.split('-');
+                const months = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                return `${months[parseInt(m)]} ${y}`;
+            } else {
+                return 'ปี ' + key;
+            }
+        }
+
+        function renderStats() {
+            let data = aggregateData();
+            data = filterData(data);
+            data = sortData(data);
+
+            // Update summary
+            const totalCount = data.reduce((s, d) => s + d.count, 0);
+            const totalResets = data.reduce((s, d) => s + d.resets, 0);
+            el.sumTotal.textContent = totalCount.toLocaleString();
+            el.sumResets.textContent = totalResets.toLocaleString();
+            el.sumDays.textContent = data.length;
+
+            // Update th headers
+            const dateLabels = { daily: 'วันที่', monthly: 'เดือน', yearly: 'ปี' };
+            updateThHeaders(dateLabels[currentTab]);
+
+            // Render table
+            if (data.length === 0) {
+                el.statsBody.innerHTML = '<tr><td colspan="3" class="stats-empty">ยังไม่มีข้อมูลสถิติ</td></tr>';
+                return;
+            }
+
+            el.statsBody.innerHTML = data.map(row => `
+                <tr>
+                    <td>${formatDateLabel(row.key)}</td>
+                    <td class="count-cell">${row.count}</td>
+                    <td class="reset-cell">${row.resets}</td>
+                </tr>
+            `).join('');
         }
 
         // =============================================
