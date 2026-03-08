@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 Smart Parcel Box — Dashboard</title>
+    <meta name="description" content="Real-time dashboard for IoT Smart Parcel Box - กล่องรับพัสดุอัจฉริยะ">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --bg-card-hover: rgba(255, 255, 255, 0.07);
+            --border-card: rgba(255, 255, 255, 0.08);
+            --text-primary: #f0f2f5;
+            --text-secondary: #8b95a5;
+            --text-muted: #5a6478;
+            --accent-green: #22c55e;
+            --accent-green-glow: rgba(34, 197, 94, 0.3);
+            --accent-yellow: #eab308;
+            --accent-yellow-glow: rgba(234, 179, 8, 0.3);
+            --accent-red: #ef4444;
+            --accent-red-glow: rgba(239, 68, 68, 0.3);
+            --accent-blue: #3b82f6;
+            --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes bgFloat {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            33% {
+                transform: translate(2%, -2%) rotate(1deg);
+            }
+
+            66% {
+                transform: translate(-1%, 1%) rotate(-0.5deg);
+            }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 2.5rem 1rem 1.5rem;
+        }
+
+        .header-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.3rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Connection Status */
+        .connection-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green-glow);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .connection-dot.offline {
+            background: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red-glow);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(0.85);
+            }
+        }
+
+        /* Container */
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 1rem 2rem;
+        }
+
+        /* Main Gauge Card */
+        .gauge-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 24px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gauge-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient-hero);
+        }
+
+        .gauge-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .gauge-value {
+            font-size: 5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .gauge-value.status-empty {
+            color: var(--accent-green);
+            text-shadow: 0 0 40px var(--accent-green-glow);
+        }
+
+        .gauge-value.status-has {
+            color: var(--accent-yellow);
+            text-shadow: 0 0 40px var(--accent-yellow-glow);
+        }
+
+        .gauge-value.status-full {
+            color: var(--accent-red);
+            text-shadow: 0 0 40px var(--accent-red-glow);
+        }
+
+        .gauge-unit {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.2rem;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 1.2rem;
+            transition: all 0.4s ease;
+        }
+
+        .status-badge.empty {
+            background: rgba(34, 197, 94, 0.12);
+            color: var(--accent-green);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .status-badge.has-parcel {
+            background: rgba(234, 179, 8, 0.12);
+            color: var(--accent-yellow);
+            border: 1px solid rgba(234, 179, 8, 0.2);
+        }
+
+        .status-badge.full {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            animation: alertPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes alertPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-badge.empty .status-dot {
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green-glow);
+        }
+
+        .status-badge.has-parcel .status-dot {
+            background: var(--accent-yellow);
+            box-shadow: 0 0 8px var(--accent-yellow-glow);
+        }
+
+        .status-badge.full .status-dot {
+            background: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red-glow);
+        }
+
+        /* LED Status Row */
+        .led-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .led-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1.2rem 0.5rem;
+            text-align: center;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            transition: all 0.3s ease;
+        }
+
+        .led-indicator {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            margin: 0 auto 0.6rem;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .led-indicator::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            transition: all 0.4s ease;
+        }
+
+        .led-indicator.red-on {
+            background: var(--accent-red);
+            box-shadow: 0 0 20px var(--accent-red-glow), 0 0 40px rgba(239, 68, 68, 0.15);
+        }
+
+        .led-indicator.red-on::after {
+            border: 2px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .led-indicator.red-off {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .led-indicator.red-off::after {
+            border: 2px solid transparent;
+        }
+
+        .led-indicator.yellow-on {
+            background: var(--accent-yellow);
+            box-shadow: 0 0 20px var(--accent-yellow-glow), 0 0 40px rgba(234, 179, 8, 0.15);
+        }
+
+        .led-indicator.yellow-on::after {
+            border: 2px solid rgba(234, 179, 8, 0.3);
+        }
+
+        .led-indicator.yellow-off {
+            background: rgba(234, 179, 8, 0.15);
+        }
+
+        .led-indicator.yellow-off::after {
+            border: 2px solid transparent;
+        }
+
+        .led-indicator.green-on {
+            background: var(--accent-green);
+            box-shadow: 0 0 20px var(--accent-green-glow), 0 0 40px rgba(34, 197, 94, 0.15);
+        }
+
+        .led-indicator.green-on::after {
+            border: 2px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .led-indicator.green-off {
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .led-indicator.green-off::after {
+            border: 2px solid transparent;
+        }
+
+        .led-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Info Cards */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1rem;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+        }
+
+        .info-card-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .info-card-value {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Event Log */
+        .log-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            margin-bottom: 1rem;
+        }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+        }
+
+        .log-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .log-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        .log-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+
+        .log-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .log-time {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        .log-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* Settings Card */
+        .settings-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 1.2rem;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+        }
+
+        .settings-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .free-badge {
+            display: inline-block;
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+            font-size: 0.65rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 100px;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        .setting-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .setting-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .setting-input {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-family: 'Inter', monospace;
+            transition: all 0.2s;
+        }
+
+        .setting-input:focus {
+            outline: none;
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .setting-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn-connect {
+            width: 100%;
+            padding: 0.7rem;
+            background: var(--gradient-hero);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 0.3rem;
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-connect:active {
+            transform: translateY(0);
+        }
+
+        .btn-connect:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                max-width: 520px;
+            }
+
+            .header h1 {
+                font-size: 2.2rem;
+            }
+
+            .gauge-value {
+                font-size: 6rem;
+            }
+        }
+
+        .gauge-value.bump {
+            transform: scale(1.15);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="header-icon">📦</div>
+        <h1>Smart Parcel Box</h1>
+        <p>กล่องรับพัสดุอัจฉริยะ — IoT Dashboard</p>
+    </div>
+
+    <div class="connection-bar">
+        <span class="connection-dot offline" id="connDot"></span>
+        <span id="connText">กำลังเชื่อมต่อ...</span>
+    </div>
+
+    <div class="container">
+
+        <!-- Main Gauge -->
+        <div class="gauge-card">
+            <div class="gauge-label">จำนวนพัสดุในตู้</div>
+            <div class="gauge-value status-empty" id="parcelCount">0</div>
+            <div class="gauge-unit">ชิ้น</div>
+            <div class="status-badge empty" id="statusBadge">
+                <span class="status-dot"></span>
+                <span id="statusText">ตู้ว่าง — พร้อมรับพัสดุ</span>
+            </div>
+        </div>
+
+        <!-- LED Status -->
+        <div class="led-row">
+            <div class="led-card">
+                <div class="led-indicator red-off" id="ledRed"></div>
+                <div class="led-label">🔴 เต็ม</div>
+            </div>
+            <div class="led-card">
+                <div class="led-indicator yellow-off" id="ledYellow"></div>
+                <div class="led-label">🟡 มีพัสดุ</div>
+            </div>
+            <div class="led-card">
+                <div class="led-indicator green-off" id="ledGreen"></div>
+                <div class="led-label">🟢 ว่าง</div>
+            </div>
+        </div>
+
+        <!-- Info Cards -->
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-card-label">อัปเดตล่าสุด</div>
+                <div class="info-card-value" id="lastUpdate">--:--:--</div>
+            </div>
+            <div class="info-card">
+                <div class="info-card-label">การเชื่อมต่อ</div>
+                <div class="info-card-value" id="connMode">Firebase Realtime</div>
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="log-card">
+            <div class="log-header">
+                <span class="log-title">📋 ประวัติเหตุการณ์</span>
+            </div>
+            <ul class="log-list" id="logList">
+                <li class="log-empty">ยังไม่มีเหตุการณ์</li>
+            </ul>
+        </div>
+
+        <!-- Settings -->
+        <div class="settings-card">
+            <div class="settings-title">⚙️ การตั้งค่า Firebase<span class="free-badge"></span></div>
+            <div class="setting-row">
+                <label class="setting-label">Firebase Database URL</label>
+                <input type="text" class="setting-input" id="firebaseUrl"
+                    placeholder="https://your-project.firebaseio.com">
+            </div>
+            <div class="setting-row">
+                <label class="setting-label">API Key (ถ้ามี — ว่างได้ถ้า rules เปิด public)</label>
+                <input type="text" class="setting-input" id="firebaseKey"
+                    placeholder="ว่างได้ถ้า rules เปิด read: true">
+            </div>
+            <button class="btn-connect" id="btnConnect" onclick="startMonitoring()">
+                เชื่อมต่อ Dashboard
+            </button>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        Smart Parcel Box IoT Dashboard v2.0<br>
+        ESP32 + Telegram + Firebase — ฟรีทั้งหมด ไม่มีค่ารายเดือน
+    </div>
+
+    <!-- Firebase SDK (compat mode for simplicity, ฟรี) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+    <script>
+        // =============================================
+        // State
+        // =============================================
+        let db = null;
+        let unsubscribe = null;
+        let prevCount = -1;
+        let prevStatus = -1;
+
+        // =============================================
+        // DOM Elements
+        // =============================================
+        const el = {
+            parcelCount: document.getElementById('parcelCount'),
+            statusBadge: document.getElementById('statusBadge'),
+            statusText: document.getElementById('statusText'),
+            ledRed: document.getElementById('ledRed'),
+            ledYellow: document.getElementById('ledYellow'),
+            ledGreen: document.getElementById('ledGreen'),
+            connDot: document.getElementById('connDot'),
+            connText: document.getElementById('connText'),
+            lastUpdate: document.getElementById('lastUpdate'),
+            connMode: document.getElementById('connMode'),
+            logList: document.getElementById('logList'),
+            firebaseUrl: document.getElementById('firebaseUrl'),
+            firebaseKey: document.getElementById('firebaseKey'),
+            btnConnect: document.getElementById('btnConnect'),
+        };
+
+        // =============================================
+        // Load saved settings
+        // =============================================
+        (function loadSettings() {
+            const savedUrl = localStorage.getItem('fb_url');
+            const savedKey = localStorage.getItem('fb_key');
+            if (savedUrl) el.firebaseUrl.value = savedUrl;
+            if (savedKey) el.firebaseKey.value = savedKey;
+            if (savedUrl) {
+                setTimeout(() => startMonitoring(), 500);
+            }
+        })();
+
+        // =============================================
+        // Start Monitoring — Firebase Realtime Listener
+        // =============================================
+        function startMonitoring() {
+            const firebaseUrl = el.firebaseUrl.value.trim().replace(/\/$/, '');
+            const apiKey = el.firebaseKey.value.trim();
+
+            if (!firebaseUrl) {
+                shakeElement(el.firebaseUrl);
+                return;
+            }
+
+            // Save settings
+            localStorage.setItem('fb_url', firebaseUrl);
+            if (apiKey) localStorage.setItem('fb_key', apiKey);
+
+            el.btnConnect.disabled = true;
+            el.btnConnect.textContent = 'กำลังเชื่อมต่อ...';
+
+            // Cleanup previous listener
+            if (unsubscribe) {
+                unsubscribe();
+                unsubscribe = null;
+            }
+
+            try {
+                // Extract project ID from URL for app name
+                const projectId = firebaseUrl.replace('https://', '').replace('.firebaseio.com', '');
+
+                // Initialize Firebase (or reinitialize)
+                const existingApps = firebase.apps;
+                let app;
+                if (existingApps.length > 0) {
+                    app = existingApps[0];
+                    app.delete().then(() => {
+                        initFirebaseApp(firebaseUrl, apiKey, projectId);
+                    });
+                    return;
+                }
+                initFirebaseApp(firebaseUrl, apiKey, projectId);
+            } catch (err) {
+                console.error('Firebase init error:', err);
+                setOffline('เชื่อมต่อไม่สำเร็จ: ' + err.message);
+            }
+        }
+
+        function initFirebaseApp(firebaseUrl, apiKey, projectId) {
+            const config = {
+                databaseURL: firebaseUrl,
+            };
+            if (apiKey) config.apiKey = apiKey;
+
+            const app = firebase.initializeApp(config);
+            db = firebase.database();
+
+            // =============================================
+            // Real-time Listener — ไม่ต้อง polling!
+            // Firebase จะ push ข้อมูลมาเองทันทีที่มีการเปลี่ยนแปลง
+            // =============================================
+            const parcelRef = db.ref('parcelBox');
+
+            parcelRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
+                    setOnline();
+                    return;
+                }
+
+                setOnline();
+
+                const count = data.parcelCount ?? 0;
+                const status = data.boxStatus ?? 0;
+                const statusTextStr = data.statusText ?? '';
+                const leds = data.leds ?? {};
+
+                // Update UI
+                updateParcelCount(count);
+                updateStatus(status, statusTextStr);
+                updateLEDs(leds, status);
+                updateTimestamp();
+
+                prevCount = count;
+                prevStatus = status;
+            }, (error) => {
+                console.error('Firebase listen error:', error);
+                setOffline('ข้อผิดพลาด: ' + error.message);
+            });
+
+            // Listen to events (most recent 10)
+            const eventsRef = db.ref('parcelBox/events');
+            eventsRef.limitToLast(10).on('value', (snapshot) => {
+                const events = snapshot.val();
+                renderFirebaseEvents(events);
+            });
+
+            // Store unsubscribe function
+            unsubscribe = () => {
+                parcelRef.off();
+                eventsRef.off();
+            };
+        }
+
+        // =============================================
+        // UI Updates
+        // =============================================
+        function updateParcelCount(count) {
+            if (el.parcelCount.textContent !== String(count)) {
+                el.parcelCount.textContent = count;
+                el.parcelCount.classList.add('bump');
+                setTimeout(() => el.parcelCount.classList.remove('bump'), 300);
+            }
+        }
+
+        function updateStatus(status, text) {
+            const badge = el.statusBadge;
+            const gauge = el.parcelCount;
+
+            badge.className = 'status-badge';
+            gauge.className = 'gauge-value';
+
+            switch (status) {
+                case 0:
+                    badge.classList.add('empty');
+                    gauge.classList.add('status-empty');
+                    el.statusText.textContent = text || 'ตู้ว่าง — พร้อมรับพัสดุ';
+                    break;
+                case 1:
+                    badge.classList.add('has-parcel');
+                    gauge.classList.add('status-has');
+                    el.statusText.textContent = text || 'มีพัสดุอยู่ในตู้';
+                    break;
+                case 2:
+                    badge.classList.add('full');
+                    gauge.classList.add('status-full');
+                    el.statusText.textContent = text || 'ตู้เต็ม — กรุณามารับพัสดุ';
+                    break;
+            }
+        }
+
+        function updateLEDs(leds, status) {
+            const isRed = leds.red !== undefined ? leds.red > 0 : status === 2;
+            const isYellow = leds.yellow !== undefined ? leds.yellow > 0 : status === 1;
+            const isGreen = leds.green !== undefined ? leds.green > 0 : status === 0;
+
+            el.ledRed.className = `led-indicator ${isRed ? 'red-on' : 'red-off'}`;
+            el.ledYellow.className = `led-indicator ${isYellow ? 'yellow-on' : 'yellow-off'}`;
+            el.ledGreen.className = `led-indicator ${isGreen ? 'green-on' : 'green-off'}`;
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            el.lastUpdate.textContent = now.toLocaleTimeString('th-TH', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        function renderFirebaseEvents(events) {
+            if (!events) {
+                el.logList.innerHTML = '<li class="log-empty">ยังไม่มีเหตุการณ์</li>';
+                return;
+            }
+
+            // Convert object to array and sort by timestamp (newest first)
+            const items = Object.values(events)
+                .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                .slice(0, 10);
+
+            if (items.length === 0) {
+                el.logList.innerHTML = '<li class="log-empty">ยังไม่มีเหตุการณ์</li>';
+                return;
+            }
+
+            el.logList.innerHTML = items.map(item => {
+                const time = item.timestamp
+                    ? new Date(item.timestamp * 1000).toLocaleTimeString('th-TH', {
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    })
+                    : '--:--';
+                return `
+                    <li class="log-item">
+                        <span class="log-icon">${item.icon || '📋'}</span>
+                        <div>
+                            <div class="log-text">${item.text || ''}</div>
+                            <div class="log-time">${time}</div>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function setOnline() {
+            el.connDot.className = 'connection-dot';
+            el.connText.textContent = 'เชื่อมต่อแล้ว — Real-time (อัปเดตทันที)';
+            el.connMode.textContent = 'Firebase ✓';
+            el.connMode.style.color = 'var(--accent-green)';
+            el.btnConnect.textContent = '✓ เชื่อมต่อแล้ว';
+            el.btnConnect.disabled = false;
+        }
+
+        function setOffline(msg) {
+            el.connDot.className = 'connection-dot offline';
+            el.connText.textContent = msg || 'ไม่สามารถเชื่อมต่อได้';
+            el.connMode.textContent = 'Offline';
+            el.connMode.style.color = 'var(--accent-red)';
+            el.btnConnect.textContent = 'ลองเชื่อมต่อใหม่';
+            el.btnConnect.disabled = false;
+        }
+
+        // =============================================
+        // Utilities
+        // =============================================
+        function shakeElement(elem) {
+            elem.style.animation = 'none';
+            elem.offsetHeight;
+            elem.style.animation = 'shake 0.4s ease';
+            elem.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+            setTimeout(() => {
+                elem.style.borderColor = '';
+                elem.style.animation = '';
+            }, 1000);
+        }
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-6px); }
+                75% { transform: translateX(6px); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+
+</html>

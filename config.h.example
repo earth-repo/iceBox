@@ -1,0 +1,41 @@
+// =============================================
+// config.h — การตั้งค่าระบบกล่องรับพัสดุอัจฉริยะ
+// =============================================
+// คัดลอกไฟล์นี้เป็น config.h แล้วใส่ค่าจริง:
+//   copy config.h.example config.h
+
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// --- WiFi ---
+#define WIFI_SSID       "YOUR_WIFI_SSID"
+#define WIFI_PASSWORD   "YOUR_WIFI_PASSWORD"
+
+// --- Telegram Bot ---
+// วิธีขอ: เปิด Telegram → ค้นหา @BotFather → /newbot → ได้ Token
+// หา Chat ID: ค้นหา @userinfobot → ส่งข้อความอะไรก็ได้ → ได้ Chat ID
+#define TELEGRAM_BOT_TOKEN  "YOUR_BOT_TOKEN"
+#define TELEGRAM_CHAT_ID    "YOUR_CHAT_ID"
+
+// --- Firebase Realtime Database ---
+// วิธีขอ: console.firebase.google.com → สร้าง Project → Realtime Database
+#define FIREBASE_HOST      "YOUR_PROJECT.firebasedatabase.app"
+#define FIREBASE_API_KEY   "YOUR_WEB_API_KEY"
+
+// --- Pin Mapping (ตรงกับ program_v1) ---
+#define PIN_INPUT_DOOR   14    // Limit switch ฝาบน (Input)
+#define PIN_OUTPUT_DOOR  27    // Limit switch ฝาล่าง (Output)
+#define PIN_COUNT_SS     35    // Photo sensor นับจำนวนพัสดุ
+#define PIN_MAX_SS       32    // Photo sensor ตรวจจับเต็ม
+#define PIN_RESET_SW     15    // Push switch รีเซ็ต
+#define PIN_RED_LED      33    // LED แดง (เต็ม)
+#define PIN_YELLOW_LED   26    // LED เหลือง (มีพัสดุ)
+#define PIN_GREEN_LED    25    // LED เขียว (ว่าง)
+
+// --- Timing ---
+#define DEBOUNCE_MS           200    // Debounce สำหรับ sensor (ms)
+#define FIREBASE_UPDATE_MS    3000   // อัปเดต Firebase ทุก 3 วินาที
+#define WIFI_RETRY_MS         5000   // ลอง reconnect WiFi ทุก 5 วินาที
+#define TELEGRAM_COOLDOWN_MS  3000   // ป้องกันส่ง Telegram ถี่เกินไป (ms)
+
+#endif
