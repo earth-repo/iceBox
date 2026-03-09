@@ -1088,9 +1088,9 @@
             databaseURL: "https://boxparcel-default-rtdb.asia-southeast1.firebasedatabase.app",
         };
 
-        // Init Firebase for auth check (separate from dashboard DB init)
-        const authApp = firebase.initializeApp(authConfig, 'authApp');
-        const authInstance = authApp.auth();
+        // ใช้ default app เดียวกับ index.html เพื่อให้ auth state แชร์กัน
+        firebase.initializeApp(authConfig);
+        const authInstance = firebase.auth();
 
         authInstance.onAuthStateChanged((user) => {
             if (!user) {
@@ -1199,12 +1199,11 @@
                 // Extract project ID from URL for app name
                 const projectId = firebaseUrl.replace('https://', '').replace('.firebaseio.com', '');
 
-                // Initialize Firebase (or reinitialize)
-                const existingApps = firebase.apps;
-                let app;
-                if (existingApps.length > 0) {
-                    app = existingApps[0];
-                    app.delete().then(() => {
+                // Initialize Firebase DB app (ใช้ named app แยกจาก auth default app)
+                // ลบ dbApp เก่าถ้ามี
+                const dbApps = firebase.apps.filter(a => a.name === 'dbApp');
+                if (dbApps.length > 0) {
+                    dbApps[0].delete().then(() => {
                         initFirebaseApp(firebaseUrl, apiKey, projectId);
                     });
                     return;
@@ -1222,8 +1221,8 @@
             };
             if (apiKey) config.apiKey = apiKey;
 
-            const app = firebase.initializeApp(config);
-            db = firebase.database();
+            const app = firebase.initializeApp(config, 'dbApp');
+            db = app.database();
 
             // =============================================
             // Real-time Listener — ไม่ต้อง polling!
