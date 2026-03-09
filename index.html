@@ -1,13 +1,402 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 
 <head>
-    <meta http-equiv="refresh" content="0; url=dashboard.html">
-    <title>Smart Parcel Box</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Smart Parcel Box — เข้าสู่ระบบ</title>
+    <meta name="description" content="Login to Smart Parcel Box Dashboard">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --border-card: rgba(255, 255, 255, 0.08);
+            --text-primary: #f0f2f5;
+            --text-secondary: #8b95a5;
+            --text-muted: #5a6478;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes bgFloat {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            33% {
+                transform: translate(2%, -2%) rotate(1deg);
+            }
+
+            66% {
+                transform: translate(-1%, 1%) rotate(-0.5deg);
+            }
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 1rem;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-icon {
+            font-size: 3.5rem;
+            margin-bottom: 0.8rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        .login-header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.4rem;
+        }
+
+        .login-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient-hero);
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.25s ease;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: rgba(102, 126, 234, 0.6);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.8rem;
+            background: var(--gradient-hero);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            margin-top: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(102, 126, 234, 0.45);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error-msg {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 10px;
+            padding: 0.7rem 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+            color: var(--accent-red);
+            text-align: center;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 0.4rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-6px);
+            }
+
+            75% {
+                transform: translateX(6px);
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <p>Redirecting to <a href="dashboard.html">Dashboard</a>...</p>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-icon">📦</div>
+            <h1>Smart Parcel Box</h1>
+            <p>เข้าสู่ระบบเพื่อดู Dashboard</p>
+        </div>
+
+        <div class="login-card">
+            <div class="error-msg" id="errorMsg"></div>
+
+            <form id="loginForm" onsubmit="return handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label" for="email">📧 อีเมล</label>
+                    <input type="email" class="form-input" id="email" placeholder="your@email.com" required
+                        autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">🔑 รหัสผ่าน</label>
+                    <input type="password" class="form-input" id="password" placeholder="รหัสผ่าน" required
+                        autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn-login" id="btnLogin">
+                    เข้าสู่ระบบ
+                </button>
+            </form>
+        </div>
+
+        <div class="footer">
+            Smart Parcel Box IoT Dashboard v2.0<br>
+            🔒 เข้าสู่ระบบด้วย Firebase Authentication
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+    <script>
+        // =============================================
+        // Firebase Config
+        // =============================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA-iVhr0jtymjAUTQdWPXX0ZqpU4XH8lvQ",
+            authDomain: "boxparcel-default-rtdb.firebaseapp.com",
+            databaseURL: "https://boxparcel-default-rtdb.asia-southeast1.firebasedatabase.app",
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // =============================================
+        // ตรวจสอบสถานะ Login อัตโนมัติ
+        // =============================================
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // ล็อกอินแล้ว → ไป Dashboard
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        // =============================================
+        // Handle Login
+        // =============================================
+        function handleLogin(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btnLogin');
+            const errorEl = document.getElementById('errorMsg');
+
+            // Reset error
+            errorEl.style.display = 'none';
+
+            // Disable button
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> กำลังเข้าสู่ระบบ...';
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // สำเร็จ → onAuthStateChanged จะ redirect ให้
+                    btn.innerHTML = '✓ สำเร็จ! กำลังเปิด Dashboard...';
+                })
+                .catch((error) => {
+                    btn.disabled = false;
+                    btn.textContent = 'เข้าสู่ระบบ';
+
+                    // แปลง error เป็นภาษาไทย
+                    let msg = '';
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                            msg = '❌ ไม่พบอีเมลนี้ในระบบ';
+                            break;
+                        case 'auth/wrong-password':
+                            msg = '❌ รหัสผ่านไม่ถูกต้อง';
+                            break;
+                        case 'auth/invalid-email':
+                            msg = '❌ รูปแบบอีเมลไม่ถูกต้อง';
+                            break;
+                        case 'auth/too-many-requests':
+                            msg = '⚠️ ลองผิดหลายครั้ง กรุณารอสักครู่';
+                            break;
+                        case 'auth/invalid-credential':
+                            msg = '❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+                            break;
+                        default:
+                            msg = '❌ เกิดข้อผิดพลาด: ' + error.message;
+                    }
+
+                    errorEl.textContent = msg;
+                    errorEl.style.display = 'block';
+
+                    // Shake the card
+                    const card = document.querySelector('.login-card');
+                    card.style.animation = 'none';
+                    card.offsetHeight;
+                    card.style.animation = 'shake 0.4s ease';
+                    setTimeout(() => card.style.animation = '', 500);
+                });
+
+            return false;
+        }
+    </script>
 </body>
 
 </html>

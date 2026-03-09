@@ -617,6 +617,79 @@
         }
 
         /* =============================================
+           Door Status Section
+           ============================================= */
+        .door-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .door-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1rem 0.8rem;
+            text-align: center;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(20px);
+            transition: all 0.3s ease;
+        }
+
+        .door-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .door-label {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+        }
+
+        .door-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.7rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .door-status.closed {
+            background: rgba(34, 197, 94, 0.12);
+            color: var(--accent-green);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .door-status.opened {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            animation: alertPulse 1.5s ease-in-out infinite;
+        }
+
+        .door-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .door-status.closed .door-status-dot {
+            background: var(--accent-green);
+            box-shadow: 0 0 6px var(--accent-green-glow);
+        }
+
+        .door-status.opened .door-status-dot {
+            background: var(--accent-red);
+            box-shadow: 0 0 6px var(--accent-red-glow);
+        }
+
+        /* =============================================
            Stats Section
            ============================================= */
         .stats-card {
@@ -826,6 +899,24 @@
         <div class="header-icon">📦</div>
         <h1>Smart Parcel Box</h1>
         <p>กล่องรับพัสดุอัจฉริยะ — IoT Dashboard</p>
+        <!-- User bar -->
+        <div id="userBar" style="display:none; margin-top:0.8rem; font-size:0.78rem; color:var(--text-muted);">
+            👤 <span id="userEmail"></span>
+            <button onclick="logoutUser()" style="
+                margin-left: 0.6rem;
+                padding: 0.3rem 0.8rem;
+                background: rgba(239, 68, 68, 0.15);
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                border-radius: 100px;
+                color: #ef4444;
+                font-size: 0.72rem;
+                font-weight: 600;
+                cursor: pointer;
+                font-family: 'Inter', sans-serif;
+                transition: all 0.2s;
+            " onmouseover="this.style.background='rgba(239,68,68,0.25)'"
+                onmouseout="this.style.background='rgba(239,68,68,0.15)'">🚪 ออกจากระบบ</button>
+        </div>
     </div>
 
     <div class="connection-bar">
@@ -833,7 +924,7 @@
         <span id="connText">กำลังเชื่อมต่อ...</span>
     </div>
 
-    <div class="container">
+    <div class="container" style="display:none">
 
         <!-- Main Gauge -->
         <div class="gauge-card">
@@ -859,6 +950,26 @@
             <div class="led-card">
                 <div class="led-indicator green-off" id="ledGreen"></div>
                 <div class="led-label">🟢 ว่าง</div>
+            </div>
+        </div>
+
+        <!-- Door Status -->
+        <div class="door-row">
+            <div class="door-card">
+                <div class="door-icon">🚪</div>
+                <div class="door-label">ประตูรับพัสดุเข้า</div>
+                <div class="door-status closed" id="doorInput">
+                    <span class="door-status-dot"></span>
+                    <span id="doorInputText">ปิด</span>
+                </div>
+            </div>
+            <div class="door-card">
+                <div class="door-icon">🚪</div>
+                <div class="door-label">ประตูนำพัสดุออก</div>
+                <div class="door-status closed" id="doorOutput">
+                    <span class="door-status-dot"></span>
+                    <span id="doorOutputText">ปิด</span>
+                </div>
             </div>
         </div>
 
@@ -957,16 +1068,48 @@
 
     </div>
 
-    <div class="footer">
+    <div class="footer" style="display:none">
         Smart Parcel Box IoT Dashboard v2.0<br>
         ESP32 + Telegram + Firebase — ฟรีทั้งหมด ไม่มีค่ารายเดือน
     </div>
 
     <!-- Firebase SDK (compat mode for simplicity, ฟรี) -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
     <script>
+        // =============================================
+        // Firebase Auth — ตรวจสอบสิทธิ์ก่อนแสดง Dashboard
+        // =============================================
+        const authConfig = {
+            apiKey: "AIzaSyA-iVhr0jtymjAUTQdWPXX0ZqpU4XH8lvQ",
+            authDomain: "boxparcel-default-rtdb.firebaseapp.com",
+            databaseURL: "https://boxparcel-default-rtdb.asia-southeast1.firebasedatabase.app",
+        };
+
+        // Init Firebase for auth check (separate from dashboard DB init)
+        const authApp = firebase.initializeApp(authConfig, 'authApp');
+        const authInstance = authApp.auth();
+
+        authInstance.onAuthStateChanged((user) => {
+            if (!user) {
+                // ไม่ได้ล็อกอิน → กลับไปหน้า Login
+                window.location.href = 'index.html';
+            } else {
+                // แสดงอีเมล + แสดงเนื้อหา
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userBar').style.display = 'block';
+                document.querySelector('.container').style.display = 'block';
+                document.querySelector('.footer').style.display = 'block';
+            }
+        });
+
+        function logoutUser() {
+            authInstance.signOut().then(() => {
+                window.location.href = 'index.html';
+            });
+        }
         // =============================================
         // State
         // =============================================
@@ -999,6 +1142,11 @@
             firebaseUrl: document.getElementById('firebaseUrl'),
             firebaseKey: document.getElementById('firebaseKey'),
             btnConnect: document.getElementById('btnConnect'),
+            // Door elements
+            doorInput: document.getElementById('doorInput'),
+            doorInputText: document.getElementById('doorInputText'),
+            doorOutput: document.getElementById('doorOutput'),
+            doorOutputText: document.getElementById('doorOutputText'),
             // Stats elements
             filterFrom: document.getElementById('filterFrom'),
             filterTo: document.getElementById('filterTo'),
@@ -1096,11 +1244,13 @@
                 const status = data.boxStatus ?? 0;
                 const statusTextStr = data.statusText ?? '';
                 const leds = data.leds ?? {};
+                const doors = data.doors ?? {};
 
                 // Update UI
                 updateParcelCount(count);
                 updateStatus(status, statusTextStr);
                 updateLEDs(leds, status);
+                updateDoors(doors);
                 updateTimestamp();
 
                 prevCount = count;
@@ -1184,6 +1334,17 @@
             el.lastUpdate.textContent = now.toLocaleTimeString('th-TH', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit'
             });
+        }
+
+        function updateDoors(doors) {
+            const inputOpen = (doors.input ?? 0) > 0;
+            const outputOpen = (doors.output ?? 0) > 0;
+
+            el.doorInput.className = `door-status ${inputOpen ? 'opened' : 'closed'}`;
+            el.doorInputText.textContent = inputOpen ? 'เปิด' : 'ปิด';
+
+            el.doorOutput.className = `door-status ${outputOpen ? 'opened' : 'closed'}`;
+            el.doorOutputText.textContent = outputOpen ? 'เปิด' : 'ปิด';
         }
 
         function renderFirebaseEvents(events) {

@@ -36,9 +36,17 @@ unsigned long lastFirebaseUpdate = 0;
 unsigned long lastTelegramSend = 0;
 unsigned long lastWiFiRetry = 0;
 
+// Max sensor — 10-second sustained trigger
+unsigned long maxSensorStartTime = 0;
+bool maxSensorActive = false;
+bool maxSensorTriggered = false;
+#define MAX_SENSOR_DELAY_MS 5000 // 5 วินาที
+
 bool prevCountState = HIGH;
 bool prevMaxState = HIGH;
 bool prevResetState = HIGH;
+bool prevInputDoorState = HIGH;
+bool prevOutputDoorState = HIGH;
 
 // =============================================
 // Telegram Bot — ส่งข้อความแจ้งเตือน
@@ -107,7 +115,11 @@ void updateFirebase() {
   leds["red"] = (boxStatus == 2) ? 1 : 0;
   leds["yellow"] = (boxStatus == 1) ? 1 : 0;
   leds["green"] = (boxStatus == 0) ? 1 : 0;
-  // leds["green"] = (boxStatus == 0 || boxStatus == 1) ? 1 : 0;
+
+  // สถานะประตู
+  JsonObject doors = doc["doors"].to<JsonObject>();
+  doors["input"] = (digitalRead(PIN_INPUT_DOOR) == LOW) ? 1 : 0;
+  doors["output"] = (digitalRead(PIN_OUTPUT_DOOR) == LOW) ? 1 : 0;
 
   // สร้าง timestamp
   doc["lastUpdate"] = millis() / 1000;
@@ -489,27 +501,78 @@ void loop() {
   prevCountState = countState;
 
   // =============================================
-  // 2. Max Sensor — ตรวจจับเต็ม
+  // 2. Max Sensor — ตรวจจับเต็ม (รอ 10 วินาทีก่อนแจ้ง)
   // =============================================
-  if (maxState == LOW && prevMaxState == HIGH) {
-    Serial.println("[SENSOR] Box is FULL!");
-    boxStatus = 2;
-    updateLEDs();
+  if (maxState == LOW) {
+    if (!maxSensorActive) {
+      // เริ่มจับเวลา
+      maxSensorActive = true;
+      maxSensorStartTime = now;
+      Serial.println("[SENSOR] Max sensor triggered — waiting 10s...");
+    } else if (!maxSensorTriggered &&
+               (now - maxSensorStartTime >= MAX_SENSOR_DELAY_MS)) {
+      // ผ่าน 10 วินาทีแล้ว → แจ้งตู้เต็ม
+      maxSensorTriggered = true;
+      Serial.println("[SENSOR] Box is FULL! (sustained 10s)");
+      boxStatus = 2;
+      updateLEDs();
 
-    String msg = "🔴 <b>ตู้พัสดุเต็มแล้ว!</b>\n";
-    msg += "📊 จำนวนพัสดุ: " + String(parcelCount) + " ชิ้น\n";
-    msg += "⚠️ กรุณามารับพัสดุ";
-    sendTelegram(msg);
+      String msg = "🔴 <b>ตู้พัสดุเต็มแล้ว!</b>\n";
+      msg += "📊 จำนวนพัสดุ: " + String(parcelCount) + " ชิ้น\n";
+      msg += "⚠️ กรุณามารับพัสดุ";
+      sendTelegram(msg);
 
-    updateFirebase();
-    addFirebaseEvent("🔴", "ตู้พัสดุเต็ม!");
+      updateFirebase();
+      addFirebaseEvent("🔴", "ตู้พัสดุเต็ม!");
+    }
+  } else {
+    // sensor ไม่ถูกบังแล้ว → reset timer
+    if (maxSensorActive) {
+      maxSensorActive = false;
+      if (maxSensorTriggered) {
+        maxSensorTriggered = false;
+        updateBoxStatus();
+        updateLEDs();
+        updateFirebase();
+      }
+    }
   }
-  if (maxState == HIGH && prevMaxState == LOW) {
-    updateBoxStatus();
-    updateLEDs();
+
+  // =============================================
+  // 2.5 Door Sensors — แจ้งเตือนเปิด/ปิดประตู
+  // =============================================
+  bool inputDoorState = digitalRead(PIN_INPUT_DOOR);
+  bool outputDoorState = digitalRead(PIN_OUTPUT_DOOR);
+
+  // ประตูรับพัสดุเข้า
+  if (inputDoorState == LOW && prevInputDoorState == HIGH) {
+    Serial.println("[DOOR] Input door OPENED");
+    sendTelegram("🚪 <b>ประตูรับพัสดุเข้า — เปิด</b>");
     updateFirebase();
+    addFirebaseEvent("🚪", "ประตูรับพัสดุเข้า — เปิด");
   }
-  prevMaxState = maxState;
+  if (inputDoorState == HIGH && prevInputDoorState == LOW) {
+    Serial.println("[DOOR] Input door CLOSED");
+    sendTelegram("🔒 <b>ประตูรับพัสดุเข้า — ปิด</b>");
+    updateFirebase();
+    addFirebaseEvent("🔒", "ประตูรับพัสดุเข้า — ปิด");
+  }
+  prevInputDoorState = inputDoorState;
+
+  // ประตูนำพัสดุออก
+  if (outputDoorState == LOW && prevOutputDoorState == HIGH) {
+    Serial.println("[DOOR] Output door OPENED");
+    sendTelegram("🚪 <b>ประตูนำพัสดุออก — เปิด</b>");
+    updateFirebase();
+    addFirebaseEvent("🚪", "ประตูนำพัสดุออก — เปิด");
+  }
+  if (outputDoorState == HIGH && prevOutputDoorState == LOW) {
+    Serial.println("[DOOR] Output door CLOSED");
+    sendTelegram("🔒 <b>ประตูนำพัสดุออก — ปิด</b>");
+    updateFirebase();
+    addFirebaseEvent("🔒", "ประตูนำพัสดุออก — ปิด");
+  }
+  prevOutputDoorState = outputDoorState;
 
   // =============================================
   // 3. Reset Switch — รีเซ็ต (physical button)

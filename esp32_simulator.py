@@ -69,6 +69,8 @@ TELEGRAM_CHAT_ID   = _config.get("TELEGRAM_CHAT_ID", "YOUR_CHAT_ID")
 # =============================================
 parcel_count = 0
 box_status = 0       # 0=ว่าง, 1=มีพัสดุ, 2=เต็ม
+door_input = 0       # 0=ปิด, 1=เปิด
+door_output = 0      # 0=ปิด, 1=เปิด
 status_labels = {
     0: "ตู้ว่าง — พร้อมรับพัสดุ",
     1: "มีพัสดุอยู่ในตู้",
@@ -92,6 +94,10 @@ def firebase_update():
             "red": 1 if box_status == 2 else 0,
             "yellow": 1 if box_status == 1 else 0,
             "green": 1 if box_status == 0 else 0,
+        },
+        "doors": {
+            "input": door_input,
+            "output": door_output,
         },
         "lastUpdate": int(time.time())
     }
@@ -281,6 +287,46 @@ def auto_demo():
     print("\n🎬 จบการจำลอง!")
 
 
+def simulate_open_input_door():
+    """จำลอง: เปิดประตูรับพัสดุเข้า"""
+    global door_input
+    door_input = 1
+    print("\n🚪 ประตูรับพัสดุเข้า — เปิด")
+    send_telegram("🚪 <b>ประตูรับพัสดุเข้า — เปิด</b>")
+    firebase_update()
+    firebase_add_event("🚪", "ประตูรับพัสดุเข้า — เปิด")
+
+
+def simulate_close_input_door():
+    """จำลอง: ปิดประตูรับพัสดุเข้า"""
+    global door_input
+    door_input = 0
+    print("\n🔒 ประตูรับพัสดุเข้า — ปิด")
+    send_telegram("🔒 <b>ประตูรับพัสดุเข้า — ปิด</b>")
+    firebase_update()
+    firebase_add_event("🔒", "ประตูรับพัสดุเข้า — ปิด")
+
+
+def simulate_open_output_door():
+    """จำลอง: เปิดประตูนำพัสดุออก"""
+    global door_output
+    door_output = 1
+    print("\n🚪 ประตูนำพัสดุออก — เปิด")
+    send_telegram("🚪 <b>ประตูนำพัสดุออก — เปิด</b>")
+    firebase_update()
+    firebase_add_event("🚪", "ประตูนำพัสดุออก — เปิด")
+
+
+def simulate_close_output_door():
+    """จำลอง: ปิดประตูนำพัสดุออก"""
+    global door_output
+    door_output = 0
+    print("\n🔒 ประตูนำพัสดุออก — ปิด")
+    send_telegram("🔒 <b>ประตูนำพัสดุออก — ปิด</b>")
+    firebase_update()
+    firebase_add_event("🔒", "ประตูนำพัสดุออก — ปิด")
+
+
 # =============================================
 # Main Menu
 # =============================================
@@ -319,12 +365,17 @@ def main():
         print(f"\n{'─' * 40}")
         print(f"  สถานะ: {status_labels.get(box_status, '?')}")
         print(f"  จำนวนพัสดุ: {parcel_count} ชิ้น")
+        print(f"  ประตูเข้า: {'🔴 เปิด' if door_input else '🟢 ปิด'}  |  ประตูออก: {'🔴 เปิด' if door_output else '🟢 ปิด'}")
         print(f"{'─' * 40}")
         print("  [1] 📦 พัสดุมาส่ง (Counter sensor)")
         print("  [2] 🔴 ตู้เต็ม (Max sensor)")
         print("  [3] ✅ รีเซ็ต (Reset button)")
         print("  [4] 🟢 เริ่มระบบใหม่ (Boot)")
         print("  [5] 🎬 จำลองอัตโนมัติ (Auto demo)")
+        print("  [6] 🚪 เปิดประตูรับพัสดุเข้า")
+        print("  [7] 🔒 ปิดประตูรับพัสดุเข้า")
+        print("  [8] 🚪 เปิดประตูนำพัสดุออก")
+        print("  [9] 🔒 ปิดประตูนำพัสดุออก")
         print("  [0] ออก")
         print()
 
@@ -343,11 +394,19 @@ def main():
             simulate_boot()
         elif choice == '5':
             auto_demo()
+        elif choice == '6':
+            simulate_open_input_door()
+        elif choice == '7':
+            simulate_close_input_door()
+        elif choice == '8':
+            simulate_open_output_door()
+        elif choice == '9':
+            simulate_close_output_door()
         elif choice == '0':
             print("\n👋 ออกจาก Simulator")
             break
         else:
-            print("  ❓ เลือก 0-5")
+            print("  ❓ เลือก 0-9")
 
 
 if __name__ == "__main__":
