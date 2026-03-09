@@ -285,14 +285,14 @@
             <form id="loginForm" onsubmit="return handleLogin(event)">
                 <div class="form-group">
                     <label class="form-label" for="email">📧 อีเมล</label>
-                    <input type="email" class="form-input" id="email" placeholder="your@email.com" required
-                        autocomplete="email">
+                    <input type="email" class="form-input" id="email" placeholder="your@email.com" value="a@aaa.com"
+                        required autocomplete="email">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="password">🔑 รหัสผ่าน</label>
-                    <input type="password" class="form-input" id="password" placeholder="รหัสผ่าน" required
-                        autocomplete="current-password">
+                    <input type="password" class="form-input" id="password" placeholder="รหัสผ่าน" value="123456"
+                        required autocomplete="current-password">
                 </div>
 
                 <button type="submit" class="btn-login" id="btnLogin">
@@ -302,8 +302,7 @@
         </div>
 
         <div class="footer">
-            Smart Parcel Box IoT Dashboard v2.0<br>
-            🔒 เข้าสู่ระบบด้วย Firebase Authentication
+            Smart Parcel Box IoT Dashboard
         </div>
     </div>
 

@@ -567,10 +567,20 @@ void loop() {
     addFirebaseEvent("🚪", "ประตูนำพัสดุออก — เปิด");
   }
   if (outputDoorState == HIGH && prevOutputDoorState == LOW) {
-    Serial.println("[DOOR] Output door CLOSED");
-    sendTelegram("🔒 <b>ประตูนำพัสดุออก — ปิด</b>");
-    updateFirebase();
-    addFirebaseEvent("🔒", "ประตูนำพัสดุออก — ปิด");
+    // ประตูนำพัสดุออก ปิดแล้ว → นำพัสดุออกทั้งหมด → รีเซ็ต
+    Serial.println("[DOOR] Output door CLOSED — resetting parcel count");
+    int oldCount = parcelCount;
+    resetParcelCount(); // รีเซ็ตจำนวนเป็น 0
+
+    String msg = "🔒 <b>ประตูนำพัสดุออก — ปิด</b>\n";
+    msg += "✅ นำพัสดุออกแล้ว " + String(oldCount) + " ชิ้น\n";
+    msg += "📦 รีเซ็ตจำนวนพัสดุเป็น 0 ชิ้น\n";
+    msg += "🟢 ตู้พร้อมรับพัสดุ";
+    sendTelegram(msg);
+
+    updateDailyStats("reset");
+    addFirebaseEvent("🔒", "ประตูนำพัสดุออก — ปิด (นำออก " + String(oldCount) +
+                               " ชิ้น → รีเซ็ต)");
   }
   prevOutputDoorState = outputDoorState;
 

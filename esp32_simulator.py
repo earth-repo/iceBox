@@ -77,6 +77,34 @@ status_labels = {
     2: "ตู้เต็ม — กรุณามารับพัสดุ"
 }
 
+
+# =============================================
+# อ่านสถานะปัจจุบันจาก Firebase (เหมือน loadCountFromFlash)
+# =============================================
+def firebase_read_state():
+    """อ่านค่า parcelCount, boxStatus, doors จาก Firebase เมื่อเริ่มต้น"""
+    global parcel_count, box_status, door_input, door_output
+    url = f"{FIREBASE_URL}/parcelBox.json"
+    if FIREBASE_KEY:
+        url += f"?auth={FIREBASE_KEY}"
+
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200 and r.json():
+            data = r.json()
+            parcel_count = data.get("parcelCount", 0)
+            box_status = data.get("boxStatus", 0)
+            doors = data.get("doors", {})
+            door_input = doors.get("input", 0)
+            door_output = doors.get("output", 0)
+            print(f"  ✅ อ่านสถานะจาก Firebase สำเร็จ")
+            print(f"     📦 จำนวนพัสดุ: {parcel_count} ชิ้น")
+            print(f"     📊 สถานะตู้: {status_labels.get(box_status, '?')}")
+        else:
+            print(f"  ⚠️ ไม่พบข้อมูลใน Firebase (เริ่มต้นค่าเป็น 0)")
+    except Exception as e:
+        print(f"  ⚠️ อ่าน Firebase ไม่ได้: {e} (เริ่มต้นค่าเป็น 0)")
+
 # =============================================
 # Firebase Functions
 # =============================================
@@ -318,13 +346,27 @@ def simulate_open_output_door():
 
 
 def simulate_close_output_door():
-    """จำลอง: ปิดประตูนำพัสดุออก"""
-    global door_output
+    """จำลอง: ปิดประตูนำพัสดุออก → รีเซ็ต (นำพัสดุออกทั้งหมดแล้ว)"""
+    global door_output, parcel_count, box_status
     door_output = 0
-    print("\n🔒 ประตูนำพัสดุออก — ปิด")
-    send_telegram("🔒 <b>ประตูนำพัสดุออก — ปิด</b>")
+
+    # นำพัสดุออกทั้งหมดแล้ว → รีเซ็ตจำนวนเป็น 0
+    old_count = parcel_count
+    parcel_count = 0
+    box_status = 0
+
+    print(f"\n🔒 ประตูนำพัสดุออก — ปิด")
+    print(f"✅ นำพัสดุออกแล้ว {old_count} ชิ้น → รีเซ็ตเป็น 0")
+
+    msg = "🔒 <b>ประตูนำพัสดุออก — ปิด</b>\n"
+    msg += f"✅ นำพัสดุออกแล้ว {old_count} ชิ้น\n"
+    msg += "📦 รีเซ็ตจำนวนพัสดุเป็น 0 ชิ้น\n"
+    msg += "🟢 ตู้พร้อมรับพัสดุ"
+    send_telegram(msg)
+
     firebase_update()
-    firebase_add_event("🔒", "ประตูนำพัสดุออก — ปิด")
+    firebase_update_stats("reset")
+    firebase_add_event("🔒", f"ประตูนำพัสดุออก — ปิด (นำออก {old_count} ชิ้น → รีเซ็ต)")
 
 
 # =============================================
@@ -345,6 +387,10 @@ def main():
     print(f"  FIREBASE_API_KEY   → {'(ตั้งค่าแล้ว)' if FIREBASE_KEY else '(ว่าง)'}")
     print(f"  TELEGRAM_BOT_TOKEN → {TELEGRAM_BOT_TOKEN[:10]}..." if len(TELEGRAM_BOT_TOKEN) > 10 else f"  TELEGRAM_BOT_TOKEN → {TELEGRAM_BOT_TOKEN}")
     print(f"  TELEGRAM_CHAT_ID   → {TELEGRAM_CHAT_ID}")
+
+    # อ่านสถานะปัจจุบันจาก Firebase (เหมือน ESP32 อ่านจาก Flash)
+    print(f"\n  📡 กำลังอ่านสถานะจาก Firebase...")
+    firebase_read_state()
 
     # ตรวจสอบการตั้งค่า
     config_ok = True
