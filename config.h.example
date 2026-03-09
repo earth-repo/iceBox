@@ -34,6 +34,7 @@
 
 // --- Timing ---
 #define DEBOUNCE_MS           200    // Debounce สำหรับ sensor (ms)
+#define MAX_SENSOR_DELAY_MS   5000   // Max sensor ต้องบังต่อเนื่อง 5 วินาที ถึงแจ้งเต็ม
 #define FIREBASE_UPDATE_MS    3000   // อัปเดต Firebase ทุก 3 วินาที
 #define WIFI_RETRY_MS         5000   // ลอง reconnect WiFi ทุก 5 วินาที
 #define TELEGRAM_COOLDOWN_MS  3000   // ป้องกันส่ง Telegram ถี่เกินไป (ms)

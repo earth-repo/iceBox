@@ -40,7 +40,7 @@ unsigned long lastWiFiRetry = 0;
 unsigned long maxSensorStartTime = 0;
 bool maxSensorActive = false;
 bool maxSensorTriggered = false;
-#define MAX_SENSOR_DELAY_MS 5000 // 5 วินาที
+// MAX_SENSOR_DELAY_MS อยู่ใน config.h
 
 bool prevCountState = HIGH;
 bool prevMaxState = HIGH;
