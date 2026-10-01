@@ -1,0 +1,932 @@
+==================================================
+เชื่อม ESP32 กับ Telegram และ Firebase — กล่องรับพัสดุอัจฉริยะ
+==================================================
+
+ไฟล์นี้บอกว่า ESP32 ต้องส่งค่าอะไรไป Telegram กับ Firebase
+รับค่าอะไรกลับมา และมีโค้ดพร้อมใช้อยู่ท้ายไฟล์ 4 ส่วน
+
+  ส่วน A  wifi_setup.h               หน้าตั้งค่า WiFi + Telegram บนตัว ESP32
+  ส่วน B  firebase_link.h            ฟังก์ชันเชื่อม Firebase (ข้อมูลหน้า Dashboard)
+  ส่วน C  telegram_link.h            ฟังก์ชันส่งแจ้งเตือน Telegram
+  ส่วน D  firebase_link_example.ino  ตัวอย่างการเรียกใช้ทั้งหมด
+
+WiFi กับ Telegram ตั้งจากมือถือผ่านหน้าตั้งค่าบนตัว ESP32
+เปลี่ยนค่าได้โดยไม่ต้อง upload โค้ดใหม่ (ดูข้อ 2)
+
+โค้ด compile ผ่านกับบอร์ด ESP32 Dev Module (ESP32 core 3.3.11,
+WiFiManager 2.0.17) ยังไม่ได้ทดสอบบนบอร์ดจริง
+
+
+--------------------------------------------------
+1. วิธีติดตั้ง
+--------------------------------------------------
+
+1) ติดตั้ง library 1 ตัว จาก Library Manager ของ Arduino IDE
+     WiFiManager (by tzapu)
+
+2) สร้างโฟลเดอร์ sketch แล้ววางไฟล์ 5 ไฟล์ไว้ด้วยกัน
+     - ไฟล์ .ino ของโปรแกรมหลัก
+     - wifi_setup.h      (คัดลอกจากส่วน A)
+     - firebase_link.h   (คัดลอกจากส่วน B)
+     - telegram_link.h   (คัดลอกจากส่วน C)
+     - config.h          (ส่งให้แยกต่างหาก เพราะมี key)
+
+3) ใส่ 3 บรรทัดนี้บนสุดของไฟล์ .ino
+     #include "firebase_link.h"
+     #include "telegram_link.h"
+     #include "wifi_setup.h"
+
+4) ใน setup() เรียกตามลำดับนี้
+     wifiBegin(digitalRead(PIN_RESET_SW) == LOW);   ต่อ WiFi / เปิดหน้าตั้งค่า
+     fbBegin();                                     ตั้งเวลาจากอินเทอร์เน็ต
+
+5) ใน loop() เรียก
+     wifiKeep();                                    WiFi หลุดให้ต่อใหม่
+
+ค่าใน config.h ที่โค้ดนี้ใช้
+     FIREBASE_HOST                 ที่อยู่ฐานข้อมูล (ไม่มี https://)
+     FIREBASE_API_KEY              key ของ Firebase
+     FIREBASE_UPDATE_MS            ส่งสถานะซ้ำทุกกี่ ms (ตั้งไว้ 3000)
+     WIFI_RETRY_MS                 WiFi หลุดให้ลองต่อใหม่ทุกกี่ ms
+     DEBOUNCE_MS                   กันนับพัสดุซ้ำ (ms)
+     MAX_SENSOR_DELAY_MS           Max sensor ต้องถูกบังนานเท่านี้ถึงนับว่าเต็ม
+     PIN_INPUT_DOOR, PIN_OUTPUT_DOOR, PIN_COUNT_SS, PIN_MAX_SS,
+     PIN_RESET_SW                  ขาที่ต่อ sensor กับสวิตช์
+
+ค่าใน config.h ที่เปลี่ยนไป
+     WIFI_SSID, WIFI_PASSWORD      ไม่ใช้แล้ว ตั้งจากหน้าตั้งค่าแทน
+     TELEGRAM_BOT_TOKEN,
+     TELEGRAM_CHAT_ID              ใช้เป็นค่าเริ่มต้นครั้งแรกเท่านั้น
+                                   ตั้งจากหน้าตั้งค่าแล้วจะใช้ค่าใหม่แทน
+                                   (ไม่มีใน config.h ก็ compile ได้)
+
+ค่าที่เพิ่มใน config.h ได้ ถ้าต้องการเปลี่ยน (ไม่ใส่ก็ใช้ค่าตามนี้)
+     #define SETUP_AP_NAME      "ParcelBox-Setup"   ชื่อ WiFi ของหน้าตั้งค่า
+     #define SETUP_AP_PASSWORD  "12345678"          รหัส (8 ตัวขึ้นไป)
+     #define SETUP_TIMEOUT_S    180                 ไม่มีใครเข้านานเท่านี้ให้ปิด
+
+
+--------------------------------------------------
+2. หน้าตั้งค่า WiFi + Telegram  (ใช้มือถือ ไม่ต้อง upload โค้ด)
+--------------------------------------------------
+
+หน้าตั้งค่าเปิดเมื่อไร
+    - เปิดเครื่องครั้งแรก ยังไม่เคยตั้ง WiFi
+    - เปิดเครื่องแล้วต่อ WiFi เดิมไม่ได้ภายใน 20 วินาที
+    - กดปุ่มรีเซ็ตค้างไว้ แล้วเปิดเครื่อง (ใช้เมื่ออยากแก้ค่า)
+
+วิธีตั้งค่า
+    1) มือถือต่อ WiFi ชื่อ ParcelBox-Setup  รหัส 12345678
+    2) หน้าตั้งค่าจะเด้งขึ้นเอง
+       ถ้าไม่เด้ง เปิดเบราว์เซอร์ไปที่ http://192.168.4.1
+    3) ตั้ง Telegram ก่อน: กดปุ่ม "Setup"
+         Telegram Bot Token    token ของบอท
+         Telegram Chat ID      คนหรือกลุ่มที่รับแจ้งเตือน
+                               (ถ้าเป็นกลุ่มจะเป็นเลขติดลบ ใส่เครื่องหมายลบด้วย)
+       กด Save แล้วกลับไปหน้าแรก
+    4) ตั้ง WiFi: กดปุ่ม "Configure WiFi"
+         เลือกชื่อ WiFi บ้าน ใส่รหัส กด Save
+       ESP32 จะต่อ WiFi แล้วปิดหน้าตั้งค่าเอง
+    5) ถ้าแก้แค่ Telegram ไม่แก้ WiFi: หลัง Save ให้กด "Exit" ที่หน้าแรก
+
+    ต้องทำข้อ 3 ก่อนข้อ 4 เพราะพอต่อ WiFi สำเร็จ หน้าตั้งค่าจะปิดทันที
+
+เรื่องที่ควรรู้
+    - ค่าทั้งหมดเก็บในตัว ESP32 ไฟดับก็ไม่หาย
+    - เข้าด้วยการกดปุ่มรีเซ็ตค้าง: ตั้งเสร็จแล้วเครื่องจะเริ่มใหม่เอง
+    - เปิดเครื่องแล้วต่อ WiFi ไม่ได้ (เช่น ไฟดับแล้ว router ยังเปิดไม่เสร็จ):
+      หน้าตั้งค่าจะเปิดรอ 3 นาที ถ้าไม่มีใครเข้าจะปิดเอง
+      แล้วทำงานต่อแบบ offline และลองต่อ WiFi เดิมทุก 5 วินาที
+    - ระหว่างที่หน้าตั้งค่าเปิดอยู่ โปรแกรมยังไม่เข้า loop()
+      แจ้งเตือนกับ Dashboard จะยังไม่ทำงาน แต่ Counter sensor ยังนับอยู่
+      (ในตัวอย่างส่วน D เปิด interrupt ก่อนเรียก wifiBegin)
+    - คนที่รู้รหัส WiFi ของหน้าตั้งค่าและอยู่ใกล้ตู้ตอนที่หน้านี้เปิด
+      จะเห็น Bot Token ได้ ควรเปลี่ยน SETUP_AP_PASSWORD ใน config.h
+
+
+--------------------------------------------------
+3. ค่าที่ "ส่ง" ไป Telegram  (มี 1 ฟังก์ชัน)
+--------------------------------------------------
+
+tgSend(message);
+
+    ส่งข้อความแจ้งเตือนเข้ามือถือ
+    ไปที่ https://api.telegram.org/bot<TOKEN>/sendMessage (แบบ POST)
+
+      message       ข้อความที่จะแจ้ง
+                    ขึ้นบรรทัดใหม่ด้วย \n
+                    ทำตัวหนาด้วย <b>...</b>
+
+    ฟังก์ชันจะเติมค่าเหล่านี้ให้เอง ไม่ต้องส่ง
+      chat_id       Chat ID จากหน้าตั้งค่า
+      parse_mode    "HTML"
+
+    ห้ามมีเครื่องหมาย < > & ในข้อความ ยกเว้น <b> กับ </b>
+
+    ตัวอย่าง
+      String msg = "📦 <b>มีพัสดุมาส่ง!</b>\n";
+      msg += "📊 จำนวนพัสดุในตู้: <b>" + String(parcelCount) + "</b> ชิ้น";
+      tgSend(msg);
+
+    ไม่มีค่าที่ต้องรับกลับจาก Telegram
+    ถ้ายังไม่ได้ตั้ง Token หรือ Chat ID ฟังก์ชันจะข้ามไปเฉย ๆ
+
+
+--------------------------------------------------
+4. ค่าที่ "ส่ง" ไป Firebase  (มี 3 ฟังก์ชัน)
+--------------------------------------------------
+
+(1) fbSendStatus(parcelCount, boxStatus, doorInput, doorOutput);
+
+    ส่งสถานะตู้ทั้งหมด ไปที่ /parcelBox (แบบ PATCH)
+
+      parcelCount   จำนวนพัสดุในตู้ เป็นตัวเลข
+      boxStatus     0 = ตู้ว่าง
+                    1 = มีพัสดุ
+                    2 = ตู้เต็ม
+      doorInput     ประตูรับพัสดุเข้า   0 = ปิด, 1 = เปิด
+      doorOutput    ประตูนำพัสดุออก    0 = ปิด, 1 = เปิด
+
+    ฟังก์ชันจะเติมค่าเหล่านี้ให้เอง ไม่ต้องส่ง
+      statusText    ข้อความสถานะ
+      leds          red / yellow / green (ติดตาม boxStatus)
+      lastUpdate    เวลาที่ส่ง
+
+    ข้อมูลที่ไปถึง Firebase หน้าตาแบบนี้
+      {
+        "parcelCount": 2,
+        "boxStatus": 1,
+        "statusText": "มีพัสดุอยู่ในตู้",
+        "leds":  { "red": 0, "yellow": 1, "green": 0 },
+        "doors": { "input": 0, "output": 0 },
+        "lastUpdate": 1790838386
+      }
+
+(2) fbAddEvent(icon, text);
+
+    เพิ่มประวัติเหตุการณ์ ไปที่ /parcelBox/events (แบบ POST)
+    หน้า Dashboard แสดง 10 รายการล่าสุด
+
+      icon          emoji 1 ตัว เช่น "📦"
+      text          ข้อความเหตุการณ์
+      (เวลา timestamp ฟังก์ชันเติมให้เอง)
+
+    ห้ามมีเครื่องหมาย " อยู่ใน icon และ text
+
+    ตัวอย่าง
+      fbAddEvent("📦", "พัสดุมาส่ง (จำนวน: 2 ชิ้น)");
+
+(3) fbAddDaily("count");   หรือ   fbAddDaily("resets");
+
+    บวกสถิติของวันนี้ขึ้น 1
+    ไปที่ /parcelBox/stats/daily/ปี-เดือน-วัน/count หรือ /resets
+
+      "count"       พัสดุมาส่ง 1 ชิ้น
+      "resets"      รีเซ็ต 1 ครั้ง
+
+
+--------------------------------------------------
+5. ค่าที่ "รับ" จาก Firebase
+--------------------------------------------------
+
+มีจุดเดียว และฟังก์ชันทำให้เองอยู่แล้ว
+
+  fbAddDaily() จะอ่านค่าเดิมของวันนั้นก่อน แล้วบวก 1 เขียนกลับ
+  ค่าที่ได้กลับมาคือตัวเลข เช่น 7  หรือ null ถ้าวันนั้นยังไม่มีข้อมูล
+
+หน้า Dashboard ไม่ได้ส่งคำสั่งกลับมาที่ ESP32
+ESP32 จึงไม่ต้องคอยอ่านค่าอื่นจาก Firebase
+
+
+--------------------------------------------------
+6. เหตุการณ์ไหน ต้องเรียกอะไร
+--------------------------------------------------
+
+ทุกเหตุการณ์เรียง: แจ้ง Telegram ก่อน แล้วส่ง Firebase
+
+เปิดเครื่อง (setup)
+    wifiBegin(digitalRead(PIN_RESET_SW) == LOW);
+    fbBegin();
+    tgSend("🟢 <b>ตู้พัสดุอัจฉริยะเริ่มทำงาน</b>\n📦 จำนวนพัสดุ: 0 ชิ้น");
+    fbSendStatus(...);
+    fbAddEvent("🟢", "ระบบเริ่มทำงาน (พัสดุ: 0 ชิ้น)");
+
+พัสดุมาส่ง (Counter sensor)
+    tgSend("📦 <b>มีพัสดุมาส่ง!</b>\n📊 จำนวนพัสดุในตู้: <b>2</b> ชิ้น");
+    fbSendStatus(...);
+    fbAddDaily("count");
+    fbAddEvent("📦", "พัสดุมาส่ง (จำนวน: 2 ชิ้น)");
+
+ตู้เต็ม (Max sensor)
+    tgSend("🔴 <b>ตู้พัสดุเต็มแล้ว!</b>\n⚠️ กรุณามารับพัสดุ");
+    fbSendStatus(...);          ส่ง boxStatus = 2
+    fbAddEvent("🔴", "ตู้พัสดุเต็ม!");
+
+กดปุ่มรีเซ็ต
+    tgSend("✅ <b>รับพัสดุแล้ว!</b>\n🟢 ตู้พร้อมรับพัสดุ");
+    fbSendStatus(...);          ส่ง parcelCount = 0, boxStatus = 0
+    fbAddDaily("resets");
+    fbAddEvent("✅", "รีเซ็ต — รับพัสดุแล้ว");
+
+ประตูรับพัสดุเข้า เปิด / ปิด
+    tgSend("🚪 <b>ประตูรับพัสดุเข้า — เปิด</b>");
+    tgSend("🔒 <b>ประตูรับพัสดุเข้า — ปิด</b>");
+    fbSendStatus(...);
+    fbAddEvent("🚪", "ประตูรับพัสดุเข้า — เปิด");
+    fbAddEvent("🔒", "ประตูรับพัสดุเข้า — ปิด");
+
+ประตูนำพัสดุออก เปิด
+    tgSend("🚪 <b>ประตูนำพัสดุออก — เปิด</b>");
+    fbSendStatus(...);
+    fbAddEvent("🚪", "ประตูนำพัสดุออก — เปิด");
+
+ประตูนำพัสดุออก ปิด (ถือว่านำพัสดุออกหมดแล้ว จึงรีเซ็ต)
+    tgSend("🔒 <b>ประตูนำพัสดุออก — ปิด</b>\n✅ นำพัสดุออกแล้ว 2 ชิ้น");
+    fbSendStatus(...);          ส่ง parcelCount = 0, boxStatus = 0
+    fbAddDaily("resets");
+    fbAddEvent("🔒", "ประตูนำพัสดุออก — ปิด (นำออก 2 ชิ้น → รีเซ็ต)");
+
+ทุก 3 วินาที
+    fbSendStatus(...);          ส่งซ้ำให้ Dashboard ตรงกับตู้เสมอ
+
+ทุกรอบของ loop
+    wifiKeep();
+
+ข้อความเต็มของแต่ละเหตุการณ์ดูได้ในส่วน D
+
+
+--------------------------------------------------
+7. ข้อควรรู้
+--------------------------------------------------
+
+- ระหว่างส่ง loop จะหยุดรอจนส่งเสร็จ (โดยทั่วไปราว 1-2 วินาทีต่อครั้ง)
+  เหตุการณ์หนึ่งส่ง 3-4 ครั้ง loop จึงหยุดได้หลายวินาที
+
+- เพราะเหตุนี้ Counter sensor ต้องนับด้วย interrupt (ดูส่วน D)
+  ถ้าอ่านด้วย digitalRead ใน loop พัสดุที่หล่นผ่าน sensor
+  ตอนกำลังส่งแจ้งเตือน "ประตูเปิด" จะไม่ถูกนับ
+
+- ขา 35 (PIN_COUNT_SS) ไม่มี pull-up ในตัว
+  ขา 34-39 ของ ESP32 เป็น input อย่างเดียว คำสั่ง INPUT_PULLUP ไม่มีผล
+  ต้องมีตัวต้านทาน pull-up ภายนอก ไม่งั้น interrupt อาจนับเอง
+
+- ปุ่มรีเซ็ตมี 2 หน้าที่
+    กดตอนเครื่องทำงานอยู่       รีเซ็ตจำนวนพัสดุ
+    กดค้างไว้ตอนเปิดเครื่อง     เปิดหน้าตั้งค่า
+
+- ทุกฟังก์ชันจะข้ามไปเฉย ๆ ถ้า WiFi หลุด โปรแกรมไม่ค้าง
+
+- ดูผลได้ที่ Serial Monitor (115200)
+    [WiFi] Connected to ...             ต่อ WiFi สำเร็จ
+    [SETUP] Portal opened: ...          หน้าตั้งค่าเปิดอยู่
+    [TG] Sent OK                        แจ้ง Telegram สำเร็จ
+    [TG] Error (HTTP ...)               แจ้ง Telegram ไม่สำเร็จ
+    [TG] Token / Chat ID not set        ยังไม่ได้ตั้งค่า Telegram
+    [FB] PATCH /parcelBox OK            ส่ง Firebase สำเร็จ
+    [FB] PATCH /parcelBox Error (...)   ส่ง Firebase ไม่สำเร็จ
+
+- เวลาใช้เวลาจริงจาก NTP ถ้ายังต่อเน็ตไม่ได้
+  สถิติรายวันจะยังไม่ถูกบวก และเวลาใน Dashboard จะขึ้น --:--
+
+
+==================================================
+ส่วน A — wifi_setup.h
+(คัดลอกตั้งแต่บรรทัดถัดไป จนถึง #endif)
+==================================================
+
+// =============================================
+// wifi_setup.h — หน้าตั้งค่า WiFi + Telegram บนตัว ESP32
+// กล่องรับพัสดุอัจฉริยะ
+// =============================================
+//
+// แก้ WiFi, Telegram Bot Token, Telegram Chat ID ได้จากมือถือ
+// ไม่ต้อง upload โค้ดใหม่ — ค่าเก็บใน Flash ไฟดับก็ไม่หาย
+//
+// Library ที่ต้องติดตั้ง:
+//   WiFiManager (by tzapu) — จาก Library Manager
+//
+// วิธีใช้:
+//   1. วางไฟล์นี้กับ telegram_link.h และ config.h ไว้ในโฟลเดอร์เดียวกับ sketch
+//   2. #include "wifi_setup.h"
+//   3. เรียก wifiBegin(...) ใน setup() และ wifiKeep() ใน loop()
+//
+// หน้าตั้งค่าเปิดเมื่อ:
+//   - ยังไม่เคยตั้ง WiFi หรือต่อ WiFi เดิมไม่ได้ตอนเปิดเครื่อง
+//   - เรียก wifiBegin(true) เช่น กดปุ่มรีเซ็ตค้างไว้ตอนเปิดเครื่อง
+//
+// วิธีเข้าหน้าตั้งค่า:
+//   มือถือต่อ WiFi ชื่อ SETUP_AP_NAME รหัส SETUP_AP_PASSWORD
+//   หน้าตั้งค่าจะเด้งขึ้นเอง (ถ้าไม่เด้ง เปิด http://192.168.4.1)
+//     ปุ่ม "Configure WiFi" = เลือก WiFi บ้าน + ใส่รหัส
+//     ปุ่ม "Setup"          = ใส่ Telegram Bot Token + Chat ID
+// =============================================
+
+#ifndef WIFI_SETUP_H
+#define WIFI_SETUP_H
+
+#include "config.h"
+#include "telegram_link.h"
+#include <WiFi.h>
+#include <WiFiManager.h>
+
+// แก้ค่าพวกนี้ได้โดย #define ใน config.h
+#ifndef SETUP_AP_NAME
+#define SETUP_AP_NAME "ParcelBox-Setup" // ชื่อ WiFi ของหน้าตั้งค่า
+#endif
+#ifndef SETUP_AP_PASSWORD
+#define SETUP_AP_PASSWORD "12345678" // รหัส WiFi ของหน้าตั้งค่า (8 ตัวขึ้นไป)
+#endif
+#ifndef SETUP_TIMEOUT_S
+#define SETUP_TIMEOUT_S 180 // ไม่มีใครเข้าหน้าตั้งค่านานเท่านี้ (วินาที) ให้ปิด
+#endif
+
+// =============================================
+// เชื่อมต่อ WiFi (เรียกครั้งเดียวใน setup)
+// forceSetup: true = เปิดหน้าตั้งค่าเสมอ แล้วเริ่มเครื่องใหม่เมื่อเสร็จ
+// =============================================
+void wifiBegin(bool forceSetup) {
+  tgLoadSettings();
+
+  WiFiManager wm;
+  WiFiManagerParameter paramToken("tg_token", "Telegram Bot Token",
+                                  tgToken.c_str(), 64);
+  WiFiManagerParameter paramChatId("tg_chat",
+                                   "Telegram Chat ID (กลุ่มเป็นเลขติดลบ)",
+                                   tgChatId.c_str(), 20);
+  wm.addParameter(&paramToken);
+  wm.addParameter(&paramChatId);
+
+  // กด Save ในหน้า Setup → บันทึกค่า Telegram ลง Flash
+  wm.setSaveParamsCallback([&]() {
+    tgSaveSettings(paramToken.getValue(), paramChatId.getValue());
+  });
+
+  const char *menu[] = {"wifi", "param", "sep", "exit"};
+  wm.setMenu(menu, 4);
+  wm.setTitle("ParcelBox");
+  wm.setConnectTimeout(20);
+  wm.setConfigPortalTimeout(SETUP_TIMEOUT_S);
+  wm.setAPClientCheck(true); // มีมือถือต่ออยู่ ไม่นับเวลาปิด
+
+  if (forceSetup) {
+    Serial.printf("[SETUP] Portal opened: WiFi \"%s\"\n", SETUP_AP_NAME);
+    wm.startConfigPortal(SETUP_AP_NAME, SETUP_AP_PASSWORD);
+    Serial.println("[SETUP] Done, restarting...");
+    delay(500);
+    ESP.restart();
+  }
+
+  // ต่อ WiFi เดิม — ถ้าต่อไม่ได้จะเปิดหน้าตั้งค่ารอ SETUP_TIMEOUT_S
+  if (wm.autoConnect(SETUP_AP_NAME, SETUP_AP_PASSWORD)) {
+    Serial.printf("[WiFi] Connected to %s, IP: %s\n", WiFi.SSID().c_str(),
+                  WiFi.localIP().toString().c_str());
+  } else {
+    Serial.println("[WiFi] Connection FAILED! Continuing offline...");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(); // ลองต่อ WiFi เดิมต่อไป
+  }
+}
+
+// =============================================
+// WiFi หลุดให้ลองต่อใหม่ทุก WIFI_RETRY_MS (เรียกใน loop)
+// =============================================
+void wifiKeep() {
+  static unsigned long lastWiFiRetry = 0;
+
+  if (WiFi.status() == WL_CONNECTED)
+    return;
+
+  unsigned long now = millis();
+  if (now - lastWiFiRetry > WIFI_RETRY_MS) {
+    lastWiFiRetry = now;
+    Serial.println("[WiFi] Reconnecting...");
+    WiFi.reconnect();
+  }
+}
+
+#endif
+
+
+==================================================
+
+
+ส่วน B — firebase_link.h
+
+
+(คัดลอกตั้งแต่บรรทัดถัดไป จนถึง #endif)
+
+
+==================================================
+
+
+
+// =============================================
+// firebase_link.h — เชื่อม ESP32 กับ Firebase Realtime Database
+// กล่องรับพัสดุอัจฉริยะ (ใช้คู่กับ dashboard.html)
+// =============================================
+//
+// วิธีใช้:
+//   1. วางไฟล์นี้กับ config.h ไว้ในโฟลเดอร์เดียวกับ sketch
+//   2. #include "firebase_link.h"
+//   3. ต่อ WiFi ก่อน (wifiBegin() ใน wifi_setup.h ต่อให้)
+//   4. เรียก fbBegin() ใน setup() แล้วเรียกฟังก์ชันส่งค่าตามเหตุการณ์
+//
+// ไม่ต้องติดตั้ง library เพิ่ม — WiFi, HTTPClient มากับ ESP32 Board Package
+//
+// ---------------------------------------------
+// ค่าที่ "ส่ง" ไป Firebase
+// ---------------------------------------------
+//   fbSendStatus()  PATCH /parcelBox
+//     parcelCount   จำนวนพัสดุในตู้ (int)
+//     boxStatus     0=ว่าง, 1=มีพัสดุ, 2=เต็ม
+//     statusText    ข้อความสถานะ (สร้างจาก boxStatus ให้เอง)
+//     leds          {red, yellow, green} 0/1 (สร้างจาก boxStatus ให้เอง)
+//     doors         {input, output} 0=ปิด, 1=เปิด
+//     lastUpdate    เวลา Unix (วินาที)
+//
+//   fbAddEvent()    POST /parcelBox/events
+//     icon          emoji 1 ตัว เช่น "📦"
+//     text          ข้อความเหตุการณ์
+//     timestamp     เวลา Unix (วินาที)
+//
+//   fbAddDaily()    PUT /parcelBox/stats/daily/YYYY-MM-DD/<field>
+//     count         จำนวนพัสดุที่มาส่งในวันนั้น
+//     resets        จำนวนครั้งที่รีเซ็ตในวันนั้น
+//
+// ---------------------------------------------
+// ค่าที่ "รับ" จาก Firebase
+// ---------------------------------------------
+//   มีจุดเดียว: fbAddDaily() อ่านค่าเดิมของวันนั้นก่อน แล้วบวก 1 เขียนกลับ
+//     GET /parcelBox/stats/daily/YYYY-MM-DD/<field>  → ได้ตัวเลข หรือ null
+//   Dashboard ไม่ได้ส่งคำสั่งกลับมาที่ ESP32
+// =============================================
+
+#ifndef FIREBASE_LINK_H
+#define FIREBASE_LINK_H
+
+#include "config.h"
+#include <HTTPClient.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <time.h>
+
+// =============================================
+// ตั้งเวลา NTP (เรียกครั้งเดียวใน setup หลังต่อ WiFi)
+// =============================================
+void fbBegin() {
+  // เวลาไทย UTC+7 — ใช้ทำ timestamp และวันที่ของสถิติรายวัน
+  configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo, 5000)) {
+    Serial.println("[NTP] Time sync failed (will retry later)");
+  }
+}
+
+// เวลา Unix (วินาที) — ได้ 0 ถ้ายัง sync NTP ไม่สำเร็จ
+unsigned long fbNow() {
+  time_t now = time(nullptr);
+  return (now > 1600000000) ? now : 0;
+}
+
+// =============================================
+// ส่ง HTTP ไป Firebase
+// method: "GET", "PUT", "PATCH", "POST"
+// คืนค่า: ข้อความที่ Firebase ตอบกลับ ("" = ส่งไม่สำเร็จ)
+// =============================================
+String fbRequest(const char *method, String path, String body) {
+  if (WiFi.status() != WL_CONNECTED)
+    return "";
+
+  WiFiClientSecure client;
+  client.setInsecure(); // ข้าม SSL verify (สำหรับ ESP32)
+
+  HTTPClient http;
+  String url = "https://" + String(FIREBASE_HOST) + path +
+               ".json?auth=" + String(FIREBASE_API_KEY);
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpCode = http.sendRequest(method, body);
+
+  String response = "";
+  if (httpCode == 200) {
+    response = http.getString();
+    Serial.printf("[FB] %s %s OK\n", method, path.c_str());
+  } else {
+    Serial.printf("[FB] %s %s Error (HTTP %d)\n", method, path.c_str(),
+                  httpCode);
+  }
+  http.end();
+  return response;
+}
+
+// =============================================
+// ส่งสถานะตู้ — เรียกทุกครั้งที่ค่าเปลี่ยน และเป็นระยะทุก FIREBASE_UPDATE_MS
+// boxStatus: 0=ว่าง, 1=มีพัสดุ, 2=เต็ม | door: 0=ปิด, 1=เปิด
+// =============================================
+void fbSendStatus(int parcelCount, int boxStatus, int doorInput,
+                  int doorOutput) {
+  String statusText = "ตู้ว่าง — พร้อมรับพัสดุ";
+  if (boxStatus == 1)
+    statusText = "มีพัสดุอยู่ในตู้";
+  if (boxStatus == 2)
+    statusText = "ตู้เต็ม — กรุณามารับพัสดุ";
+
+  String body = "{";
+  body += "\"parcelCount\":" + String(parcelCount) + ",";
+  body += "\"boxStatus\":" + String(boxStatus) + ",";
+  body += "\"statusText\":\"" + statusText + "\",";
+  body += "\"leds\":{";
+  body += "\"red\":" + String(boxStatus == 2 ? 1 : 0) + ",";
+  body += "\"yellow\":" + String(boxStatus == 1 ? 1 : 0) + ",";
+  body += "\"green\":" + String(boxStatus == 0 ? 1 : 0) + "},";
+  body += "\"doors\":{";
+  body += "\"input\":" + String(doorInput ? 1 : 0) + ",";
+  body += "\"output\":" + String(doorOutput ? 1 : 0) + "},";
+  body += "\"lastUpdate\":" + String(fbNow());
+  body += "}";
+
+  // PATCH = แก้เฉพาะ key ที่ส่ง ไม่ลบ events กับ stats
+  fbRequest("PATCH", "/parcelBox", body);
+}
+
+// =============================================
+// เพิ่ม event log — Dashboard แสดง 10 รายการล่าสุด
+// *** ห้ามมีเครื่องหมาย " ใน icon และ text ***
+// =============================================
+void fbAddEvent(String icon, String text) {
+  String body = "{";
+  body += "\"icon\":\"" + icon + "\",";
+  body += "\"text\":\"" + text + "\",";
+  body += "\"timestamp\":" + String(fbNow());
+  body += "}";
+
+  // POST = push (Firebase สร้าง key ให้เอง)
+  fbRequest("POST", "/parcelBox/events", body);
+}
+
+// =============================================
+// บวกสถิติรายวัน +1
+// field: "count" = พัสดุมาส่ง, "resets" = รีเซ็ต
+// =============================================
+void fbAddDaily(String field) {
+  time_t now = fbNow();
+  if (now == 0)
+    return; // ยังไม่รู้วันที่
+
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  char dateStr[11]; // YYYY-MM-DD
+  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &timeinfo);
+
+  String path = "/parcelBox/stats/daily/" + String(dateStr) + "/" + field;
+
+  // 1. อ่านค่าเดิม (ได้ตัวเลข หรือ "null" ถ้ายังไม่มี)
+  String oldValue = fbRequest("GET", path, "");
+  if (oldValue == "")
+    return; // อ่านไม่สำเร็จ — ไม่เขียนทับ กันสถิติหาย
+
+  // 2. บวก 1 แล้วเขียนกลับ
+  fbRequest("PUT", path, String(oldValue.toInt() + 1));
+}
+
+#endif
+
+
+==================================================
+
+
+ส่วน C — telegram_link.h
+
+
+(คัดลอกตั้งแต่บรรทัดถัดไป จนถึง #endif)
+
+
+==================================================
+
+
+
+// =============================================
+// telegram_link.h — ส่งข้อความแจ้งเตือนจาก ESP32 ไป Telegram
+// กล่องรับพัสดุอัจฉริยะ
+// =============================================
+//
+// วิธีใช้:
+//   1. วางไฟล์นี้กับ config.h ไว้ในโฟลเดอร์เดียวกับ sketch
+//   2. #include "telegram_link.h"
+//   3. ต่อ WiFi ก่อน (wifiBegin() ใน wifi_setup.h ต่อให้ และโหลดค่า Telegram ให้)
+//   4. tgSend("ข้อความ");
+//
+// ไม่ต้องติดตั้ง library เพิ่ม — WiFi, HTTPClient มากับ ESP32 Board Package
+//
+// Bot token กับ Chat ID เก็บใน Flash ของ ESP32 — แก้ได้จากหน้าตั้งค่า
+// (wifi_setup.h) โดยไม่ต้อง upload โค้ดใหม่
+//
+// ---------------------------------------------
+// ค่าที่ "ส่ง" ไป Telegram
+// ---------------------------------------------
+//   tgSend()  POST https://api.telegram.org/bot<TOKEN>/sendMessage
+//     chat_id     คนหรือกลุ่มที่รับแจ้งเตือน (จากหน้าตั้งค่า)
+//     text        ข้อความ ขึ้นบรรทัดใหม่ด้วย \n ทำตัวหนาด้วย <b>...</b>
+//     parse_mode  "HTML"
+//
+// ไม่มีค่าที่ต้อง "รับ" จาก Telegram — ดูแค่ว่าส่งสำเร็จ (HTTP 200) หรือไม่
+// =============================================
+
+#ifndef TELEGRAM_LINK_H
+#define TELEGRAM_LINK_H
+
+#include "config.h"
+#include <HTTPClient.h>
+#include <Preferences.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+
+// ค่าเริ่มต้นจาก config.h (ถ้ามี) — ใช้เมื่อยังไม่เคยตั้งผ่านหน้าตั้งค่า
+#ifndef TELEGRAM_BOT_TOKEN
+#define TELEGRAM_BOT_TOKEN ""
+#endif
+#ifndef TELEGRAM_CHAT_ID
+#define TELEGRAM_CHAT_ID ""
+#endif
+
+String tgToken;  // Bot token
+String tgChatId; // คนหรือกลุ่มที่รับแจ้งเตือน (กลุ่มเป็นเลขติดลบ)
+
+// =============================================
+// บันทึก/อ่าน ค่า Telegram จาก Flash
+// =============================================
+void tgLoadSettings() {
+  Preferences prefs;
+  prefs.begin("telegram", true); // true = read-only
+  tgToken = prefs.getString("token", TELEGRAM_BOT_TOKEN);
+  tgChatId = prefs.getString("chat_id", TELEGRAM_CHAT_ID);
+  prefs.end();
+}
+
+void tgSaveSettings(String token, String chatId) {
+  token.trim();
+  chatId.trim();
+  tgToken = token;
+  tgChatId = chatId;
+
+  Preferences prefs;
+  prefs.begin("telegram", false); // false = read-write
+  prefs.putString("token", tgToken);
+  prefs.putString("chat_id", tgChatId);
+  prefs.end();
+  Serial.println("[TG] Settings saved");
+}
+
+// =============================================
+// ส่งข้อความแจ้งเตือน
+// *** ห้ามมี < > & ในข้อความ ยกเว้น tag <b> </b> ***
+// =============================================
+void tgSend(String message) {
+  if (tgToken == "" || tgChatId == "") {
+    Serial.println("[TG] Token / Chat ID not set, skipping...");
+    return;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[TG] WiFi not connected, skipping...");
+    return;
+  }
+
+  // แปลงอักขระพิเศษให้ใส่ใน JSON ได้
+  message.replace("\\", "\\\\");
+  message.replace("\"", "\\\"");
+  message.replace("\n", "\\n");
+
+  String body = "{";
+  body += "\"chat_id\":\"" + tgChatId + "\",";
+  body += "\"text\":\"" + message + "\",";
+  body += "\"parse_mode\":\"HTML\"";
+  body += "}";
+
+  WiFiClientSecure client;
+  client.setInsecure(); // ข้าม SSL verify (สำหรับ ESP32)
+
+  HTTPClient http;
+  String url = "https://api.telegram.org/bot" + tgToken + "/sendMessage";
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpCode = http.POST(body);
+
+  if (httpCode == 200) {
+    Serial.println("[TG] Sent OK");
+  } else {
+    Serial.printf("[TG] Error (HTTP %d)\n", httpCode);
+  }
+  http.end();
+}
+
+#endif
+
+
+==================================================
+
+
+ส่วน D — firebase_link_example.ino (ตัวอย่างการเรียกใช้)
+
+
+==================================================
+
+
+
+// =============================================
+// firebase_link_example.ino — ตัวอย่างการเรียก wifi_setup.h + firebase_link.h
+// + telegram_link.h
+// แสดงว่าเหตุการณ์ไหนต้องส่งค่าอะไรไป Telegram และ Firebase
+// =============================================
+//
+// Libraries ที่ต้องติดตั้ง:
+//   1. WiFiManager (by tzapu) — จาก Library Manager
+//
+// ก่อน compile: คัดลอก config.h มาไว้ในโฟลเดอร์นี้
+// Board: ESP32 Dev Module
+// =============================================
+
+#include "firebase_link.h"
+#include "telegram_link.h"
+#include "wifi_setup.h"
+
+int parcelCount = 0; // จำนวนพัสดุในตู้
+int boxStatus = 0;   // 0=ว่าง, 1=มีพัสดุ, 2=เต็ม
+
+// Counter sensor นับด้วย interrupt
+// ระหว่างส่งข้อมูล loop หยุดรอหลายวินาที ถ้าอ่านด้วย digitalRead ใน loop
+// พัสดุที่ผ่าน sensor ช่วงนั้นจะไม่ถูกนับ
+volatile int newParcels = 0;
+volatile unsigned long lastCountTime = 0;
+
+// Max sensor — ต้องถูกบังต่อเนื่อง MAX_SENSOR_DELAY_MS ถึงนับว่าเต็ม
+unsigned long maxSensorStartTime = 0;
+bool maxSensorActive = false;
+
+bool prevResetState = HIGH;
+bool prevInputDoorState = HIGH;
+bool prevOutputDoorState = HIGH;
+
+unsigned long lastFirebaseUpdate = 0;
+
+void IRAM_ATTR onCountSensor() {
+  unsigned long now = millis();
+  if (now - lastCountTime > DEBOUNCE_MS) {
+    lastCountTime = now;
+    newParcels = newParcels + 1;
+  }
+}
+
+// ส่งสถานะปัจจุบันทั้งหมด (ประตู: LOW = เปิด)
+void sendStatus() {
+  fbSendStatus(parcelCount, boxStatus, digitalRead(PIN_INPUT_DOOR) == LOW,
+               digitalRead(PIN_OUTPUT_DOOR) == LOW);
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(PIN_INPUT_DOOR, INPUT_PULLUP);
+  pinMode(PIN_OUTPUT_DOOR, INPUT_PULLUP);
+  pinMode(PIN_COUNT_SS, INPUT_PULLUP);
+  pinMode(PIN_MAX_SS, INPUT_PULLUP);
+  pinMode(PIN_RESET_SW, INPUT_PULLUP);
+
+  // เริ่มนับก่อนต่อ WiFi — พัสดุที่มาระหว่างรอหน้าตั้งค่าจะยังถูกนับ
+  attachInterrupt(digitalPinToInterrupt(PIN_COUNT_SS), onCountSensor, FALLING);
+
+  // กดปุ่มรีเซ็ตค้างไว้ตอนเปิดเครื่อง = เปิดหน้าตั้งค่า WiFi + Telegram
+  wifiBegin(digitalRead(PIN_RESET_SW) == LOW);
+  fbBegin();
+
+  // เริ่มระบบ
+  String msg = "🟢 <b>ตู้พัสดุอัจฉริยะเริ่มทำงาน</b>\n";
+  msg += "📡 WiFi: " + WiFi.SSID() + "\n";
+  msg += "📦 จำนวนพัสดุ: " + String(parcelCount) + " ชิ้น";
+  tgSend(msg);
+
+  sendStatus();
+  fbAddEvent("🟢", "ระบบเริ่มทำงาน (พัสดุ: " + String(parcelCount) + " ชิ้น)");
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  wifiKeep();
+
+  bool maxState = digitalRead(PIN_MAX_SS);
+  bool resetState = digitalRead(PIN_RESET_SW);
+  bool inputDoorState = digitalRead(PIN_INPUT_DOOR);
+  bool outputDoorState = digitalRead(PIN_OUTPUT_DOOR);
+
+  // 1. พัสดุมาส่ง (ทีละชิ้น ชิ้นที่เหลือทำในรอบถัดไป)
+  if (newParcels > 0) {
+    noInterrupts();
+    newParcels = newParcels - 1;
+    interrupts();
+
+    parcelCount++;
+    if (boxStatus != 2)
+      boxStatus = 1;
+
+    String msg = "📦 <b>มีพัสดุมาส่ง!</b>\n";
+    msg += "📊 จำนวนพัสดุในตู้: <b>" + String(parcelCount) + "</b> ชิ้น\n";
+    if (boxStatus == 2) {
+      msg += "🔴 ตู้พัสดุเต็มแล้ว!";
+    } else {
+      msg += "🟢 ยังรับพัสดุได้";
+    }
+    tgSend(msg);
+
+    sendStatus();
+    fbAddDaily("count");
+    fbAddEvent("📦", "พัสดุมาส่ง (จำนวน: " + String(parcelCount) + " ชิ้น)");
+  }
+
+  // 2. ตู้เต็ม / หายเต็ม
+  if (maxState == LOW) {
+    if (!maxSensorActive) {
+      maxSensorActive = true;
+      maxSensorStartTime = now;
+    } else if (boxStatus != 2 &&
+               (now - maxSensorStartTime >= MAX_SENSOR_DELAY_MS)) {
+      boxStatus = 2;
+
+      String msg = "🔴 <b>ตู้พัสดุเต็มแล้ว!</b>\n";
+      msg += "📊 จำนวนพัสดุ: " + String(parcelCount) + " ชิ้น\n";
+      msg += "⚠️ กรุณามารับพัสดุ";
+      tgSend(msg);
+
+      sendStatus();
+      fbAddEvent("🔴", "ตู้พัสดุเต็ม!");
+    }
+  } else {
+    maxSensorActive = false;
+    if (boxStatus == 2) {
+      boxStatus = (parcelCount > 0) ? 1 : 0;
+      sendStatus();
+    }
+  }
+
+  // 3. กดปุ่มรีเซ็ต
+  if (resetState == LOW && prevResetState == HIGH) {
+    parcelCount = 0;
+    boxStatus = 0;
+
+    String msg = "✅ <b>รับพัสดุแล้ว!</b>\n";
+    msg += "📦 รีเซ็ตจำนวนพัสดุเป็น 0 ชิ้น\n";
+    msg += "🟢 ตู้พร้อมรับพัสดุ";
+    tgSend(msg);
+
+    sendStatus();
+    fbAddDaily("resets");
+    fbAddEvent("✅", "รีเซ็ต — รับพัสดุแล้ว");
+  }
+  prevResetState = resetState;
+
+  // 4. ประตูรับพัสดุเข้า
+  if (inputDoorState == LOW && prevInputDoorState == HIGH) {
+    tgSend("🚪 <b>ประตูรับพัสดุเข้า — เปิด</b>");
+    sendStatus();
+    fbAddEvent("🚪", "ประตูรับพัสดุเข้า — เปิด");
+  }
+  if (inputDoorState == HIGH && prevInputDoorState == LOW) {
+    tgSend("🔒 <b>ประตูรับพัสดุเข้า — ปิด</b>");
+    sendStatus();
+    fbAddEvent("🔒", "ประตูรับพัสดุเข้า — ปิด");
+  }
+  prevInputDoorState = inputDoorState;
+
+  // 5. ประตูนำพัสดุออก — ปิดแล้วถือว่านำพัสดุออกหมด → รีเซ็ต
+  if (outputDoorState == LOW && prevOutputDoorState == HIGH) {
+    tgSend("🚪 <b>ประตูนำพัสดุออก — เปิด</b>");
+    sendStatus();
+    fbAddEvent("🚪", "ประตูนำพัสดุออก — เปิด");
+  }
+  if (outputDoorState == HIGH && prevOutputDoorState == LOW) {
+    int oldCount = parcelCount;
+    parcelCount = 0;
+    boxStatus = 0;
+
+    String msg = "🔒 <b>ประตูนำพัสดุออก — ปิด</b>\n";
+    msg += "✅ นำพัสดุออกแล้ว " + String(oldCount) + " ชิ้น\n";
+    msg += "📦 รีเซ็ตจำนวนพัสดุเป็น 0 ชิ้น\n";
+    msg += "🟢 ตู้พร้อมรับพัสดุ";
+    tgSend(msg);
+
+    sendStatus();
+    fbAddDaily("resets");
+    fbAddEvent("🔒", "ประตูนำพัสดุออก — ปิด (นำออก " + String(oldCount) +
+                         " ชิ้น → รีเซ็ต)");
+  }
+  prevOutputDoorState = outputDoorState;
+
+  // 6. ส่งสถานะเป็นระยะ
+  if (now - lastFirebaseUpdate > FIREBASE_UPDATE_MS) {
+    lastFirebaseUpdate = now;
+    sendStatus();
+  }
+
+  delay(10);
+}
