@@ -4,3 +4,6 @@ config.h
 
 # ไฟล์ zip ที่ส่งให้คนอื่น อาจมี config.h อยู่ข้างใน
 *.zip
+
+# ไฟล์ที่ได้จากการ compile (firmware มีค่าจาก config.h ฝังอยู่)
+build/

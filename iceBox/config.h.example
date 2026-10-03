@@ -8,6 +8,8 @@
 #define CONFIG_H
 
 // --- WiFi ---
+// แก้ค่าแล้ว upload ใหม่ = ใช้ค่านี้ — เปลี่ยนทีหลังจากมือถือได้ (ดู wifi_setup.h)
+// เว้นว่าง "" = ตั้ง WiFi จากหน้าตั้งค่าอย่างเดียว
 #define WIFI_SSID       "YOUR_WIFI_SSID"
 #define WIFI_PASSWORD   "YOUR_WIFI_PASSWORD"
 
