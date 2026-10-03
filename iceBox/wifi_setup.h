@@ -49,7 +49,7 @@
 
 // แก้ค่าพวกนี้ได้โดย #define ใน config.h
 #ifndef SETUP_AP_NAME
-#define SETUP_AP_NAME "ParcelBox-Setup" // ชื่อ WiFi ของหน้าตั้งค่า
+#define SETUP_AP_NAME "iceBox-Wifi-Setup" // ชื่อ WiFi ของหน้าตั้งค่า
 #endif
 #ifndef SETUP_AP_PASSWORD
 #define SETUP_AP_PASSWORD "12345678" // รหัส WiFi ของหน้าตั้งค่า (8 ตัวขึ้นไป)

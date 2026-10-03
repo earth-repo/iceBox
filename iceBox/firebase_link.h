@@ -71,30 +71,43 @@ unsigned long fbNow() {
 // method: "GET", "PUT", "PATCH", "POST"
 // คืนค่า: ข้อความที่ Firebase ตอบกลับ ("" = ส่งไม่สำเร็จ)
 // =============================================
+// client กับ http ใช้ตัวเดิมตลอด — connection ที่เปิดไว้ถูกใช้ซ้ำ
+// ไม่ต้องทำ TLS handshake ใหม่ทุกครั้ง (ครั้งละ 1-2 วินาที)
+WiFiClientSecure fbClient;
+HTTPClient fbHttp;
+
 String fbRequest(const char *method, String path, String body) {
   if (WiFi.status() != WL_CONNECTED)
     return "";
 
-  WiFiClientSecure client;
-  client.setInsecure(); // ข้าม SSL verify (สำหรับ ESP32)
+  unsigned long start = millis();
+  fbClient.setInsecure(); // ข้าม SSL verify (สำหรับ ESP32)
 
-  HTTPClient http;
   String url = "https://" + String(FIREBASE_HOST) + path +
                ".json?auth=" + String(FIREBASE_API_KEY);
-  http.begin(client, url);
-  http.addHeader("Content-Type", "application/json");
 
-  int httpCode = http.sendRequest(method, body);
+  // connection เดิมอาจถูกปิดไปแล้ว — ส่งไม่ผ่านให้ต่อใหม่แล้วลองอีกครั้งเดียว
+  int httpCode = 0;
+  for (int attempt = 0; attempt < 2; attempt++) {
+    fbHttp.begin(fbClient, url);
+    fbHttp.addHeader("Content-Type", "application/json");
+    httpCode = fbHttp.sendRequest(method, body);
+    if (httpCode > 0)
+      break;
+    fbHttp.end();
+    fbClient.stop();
+  }
 
   String response = "";
   if (httpCode == 200) {
-    response = http.getString();
-    Serial.printf("[FB] %s %s OK\n", method, path.c_str());
+    response = fbHttp.getString();
+    Serial.printf("[FB] %s %s OK (%lu ms)\n", method, path.c_str(),
+                  millis() - start);
   } else {
     Serial.printf("[FB] %s %s Error (HTTP %d)\n", method, path.c_str(),
                   httpCode);
   }
-  http.end();
+  fbHttp.end();
   return response;
 }
 

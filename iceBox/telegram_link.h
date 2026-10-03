@@ -45,6 +45,11 @@
 String tgToken;  // Bot token
 String tgChatId; // คนหรือกลุ่มที่รับแจ้งเตือน (กลุ่มเป็นเลขติดลบ)
 
+// client กับ http ใช้ตัวเดิมตลอด — ข้อความที่ส่งติดกันใช้ connection เดิม
+// ไม่ต้องทำ TLS handshake ใหม่ทุกข้อความ
+WiFiClientSecure tgClient;
+HTTPClient tgHttp;
+
 // =============================================
 // บันทึก/อ่าน ค่า Telegram จาก Flash
 // =============================================
@@ -95,22 +100,29 @@ void tgSend(String message) {
   body += "\"parse_mode\":\"HTML\"";
   body += "}";
 
-  WiFiClientSecure client;
-  client.setInsecure(); // ข้าม SSL verify (สำหรับ ESP32)
+  unsigned long start = millis();
+  tgClient.setInsecure(); // ข้าม SSL verify (สำหรับ ESP32)
 
-  HTTPClient http;
   String url = "https://api.telegram.org/bot" + tgToken + "/sendMessage";
-  http.begin(client, url);
-  http.addHeader("Content-Type", "application/json");
 
-  int httpCode = http.POST(body);
+  // connection เดิมอาจถูกปิดไปแล้ว — ส่งไม่ผ่านให้ต่อใหม่แล้วลองอีกครั้งเดียว
+  int httpCode = 0;
+  for (int attempt = 0; attempt < 2; attempt++) {
+    tgHttp.begin(tgClient, url);
+    tgHttp.addHeader("Content-Type", "application/json");
+    httpCode = tgHttp.POST(body);
+    if (httpCode > 0)
+      break;
+    tgHttp.end();
+    tgClient.stop();
+  }
 
   if (httpCode == 200) {
-    Serial.println("[TG] Sent OK");
+    Serial.printf("[TG] Sent OK (%lu ms)\n", millis() - start);
   } else {
     Serial.printf("[TG] Error (HTTP %d)\n", httpCode);
   }
-  http.end();
+  tgHttp.end();
 }
 
 #endif
