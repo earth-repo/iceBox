@@ -795,6 +795,47 @@
             color: #667eea;
         }
 
+        .stats-delete-btn {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--accent-red);
+        }
+
+        .stats-delete-btn:hover {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+        }
+
+        .stats-confirm {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.8rem;
+            padding: 0.6rem 0.8rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .stats-confirm-text {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .stats-confirm-yes {
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .stats-confirm-yes:hover {
+            background: #dc2626;
+            color: #fff;
+        }
+
         .stats-summary {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1008,6 +1049,19 @@
                 <button class="stats-sort-btn" id="sortBtn" onclick="toggleSort()" title="เรียงลำดับ">
                     📅 ใหม่→เก่า
                 </button>
+                <button class="stats-sort-btn stats-delete-btn" id="deleteBtn" onclick="askDeleteStats()"
+                    title="ลบสถิติที่แสดงอยู่ในตาราง">
+                    🗑️ ลบสถิติ
+                </button>
+            </div>
+
+            <!-- ยืนยันก่อนลบสถิติ — แสดงเมื่อกดปุ่ม "ลบสถิติ" -->
+            <div class="stats-confirm" id="deleteConfirm">
+                <span class="stats-confirm-text" id="deleteText"></span>
+                <button class="stats-sort-btn" onclick="cancelDeleteStats()">ยกเลิก</button>
+                <button class="stats-sort-btn stats-confirm-yes" id="deleteYes" onclick="confirmDeleteStats()">
+                    ยืนยันลบ
+                </button>
             </div>
 
             <div class="stats-summary" id="statsSummary">
@@ -1170,6 +1224,10 @@
             sumResets: document.getElementById('sumResets'),
             sumDays: document.getElementById('sumDays'),
             sumDaysLabel: document.getElementById('sumDaysLabel'),
+            deleteBtn: document.getElementById('deleteBtn'),
+            deleteConfirm: document.getElementById('deleteConfirm'),
+            deleteText: document.getElementById('deleteText'),
+            deleteYes: document.getElementById('deleteYes'),
         };
 
         // =============================================
@@ -1465,10 +1523,11 @@
         // Stats Logic
         // =============================================
         // Filter listeners
-        el.filterFrom.addEventListener('change', renderStats);
-        el.filterTo.addEventListener('change', renderStats);
+        el.filterFrom.addEventListener('change', () => { cancelDeleteStats(); renderStats(); });
+        el.filterTo.addEventListener('change', () => { cancelDeleteStats(); renderStats(); });
 
         function switchTab(tab) {
+            cancelDeleteStats();
             currentTab = tab;
             document.querySelectorAll('.stats-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
@@ -1618,6 +1677,64 @@
                     <td class="reset-cell">${row.resets}</td>
                 </tr>
             `).join('');
+        }
+
+        // =============================================
+        // ลบสถิติ — ลบเฉพาะรายการที่แสดงอยู่ในตาราง (ตามแท็บและช่วงวันที่ที่กรอง)
+        // กดปุ่ม "ลบสถิติ" แล้วต้องกด "ยืนยันลบ" อีกครั้ง — ลบแล้วกู้คืนไม่ได้
+        // ไม่กระทบจำนวนพัสดุในตู้และประวัติเหตุการณ์
+        // =============================================
+        let pendingDeleteDays = [];  // วันที่ (YYYY-MM-DD) ที่รอยืนยันลบ
+
+        function askDeleteStats() {
+            // แถวในตารางเป็นวัน/เดือน/ปี — แปลงกลับเป็นวันที่ทั้งหมดที่อยู่ในแถวเหล่านั้น
+            const shown = new Set(filterData(aggregateData()).map(row => row.key));
+            const keyLength = { daily: 10, monthly: 7, yearly: 4 }[currentTab];
+            pendingDeleteDays = Object.keys(rawStatsData)
+                .filter(day => shown.has(day.substring(0, keyLength)))
+                .sort();
+
+            if (pendingDeleteDays.length === 0) {
+                cancelDeleteStats();
+                shakeElement(el.deleteBtn);
+                return;
+            }
+
+            const dayLabel = (day) => new Date(day).toLocaleDateString('th-TH', {
+                day: 'numeric', month: 'short', year: 'numeric'
+            });
+            const first = dayLabel(pendingDeleteDays[0]);
+            const last = dayLabel(pendingDeleteDays[pendingDeleteDays.length - 1]);
+            const parcels = pendingDeleteDays.reduce((sum, day) => sum + (rawStatsData[day].count || 0), 0);
+            const all = pendingDeleteDays.length === Object.keys(rawStatsData).length;
+
+            el.deleteText.textContent =
+                'ลบสถิติ' + (all ? 'ทั้งหมด ' : ' ') + pendingDeleteDays.length + ' วัน (' +
+                (first === last ? first : first + ' – ' + last) + ') รวมพัสดุ ' +
+                parcels.toLocaleString() + ' ชิ้น? ลบแล้วกู้คืนไม่ได้';
+            el.deleteConfirm.style.display = 'flex';
+        }
+
+        function cancelDeleteStats() {
+            pendingDeleteDays = [];
+            el.deleteConfirm.style.display = 'none';
+        }
+
+        function confirmDeleteStats() {
+            if (!db || pendingDeleteDays.length === 0) return;
+
+            // เขียน null = ลบ — ลบทุกวันในคำสั่งเดียว
+            const updates = {};
+            pendingDeleteDays.forEach(day => { updates[day] = null; });
+
+            el.deleteYes.disabled = true;
+            db.ref('parcelBox/stats/daily').update(updates)
+                .then(() => cancelDeleteStats())
+                .catch((err) => {
+                    console.error('Delete stats error:', err);
+                    el.deleteText.textContent = 'ลบไม่สำเร็จ: ' + err.message;
+                })
+                .finally(() => { el.deleteYes.disabled = false; });
         }
 
         // =============================================
