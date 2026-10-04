@@ -27,16 +27,16 @@
 // --- Pin Mapping ---
 #define PIN_INPUT_DOOR   27    // Limit switch ฝาบน (Input)
 #define PIN_OUTPUT_DOOR  13    // Limit switch ฝาล่าง (Output)
-#define PIN_COUNT_SS     14    // Photo sensor นับจำนวนพัสดุ (บังค้าง = ตู้เต็ม)
+#define PIN_COUNT_SS     14    // Photo sensor นับจำนวนพัสดุ (บังค้าง = ตู้เต็ม) — ต่อผ่านหน้าสัมผัส NO ของ Relay
 #define PIN_RESET_SW     15    // Push switch รีเซ็ต
-#define PIN_RED_LED      33    // LED แดง (เต็ม / ประตูเปิด)
+#define PIN_RED_LED      33    // LED แดง (เต็ม = ติด / ประตูเปิด = กะพริบ)
 #define PIN_YELLOW_LED   26    // LED เหลือง (มีพัสดุ)
 #define PIN_GREEN_LED    25    // LED เขียว (ว่าง)
 
 // --- Timing ---
 #define DEBOUNCE_MS           1000   // Sensor ต้องโล่งนานเท่านี้ก่อนถึงนับเป็นพัสดุชิ้นใหม่ (ms)
 #define FULL_DELAY_MS         10000  // Sensor นับพัสดุถูกบังต่อเนื่อง 10 วินาที ถึงแจ้งเต็ม
-#define LED_BLINK_MS          100    // จังหวะ LED แดงกะพริบตอนประตูนำพัสดุออกเปิด (ms)
+#define LED_BLINK_MS          100    // จังหวะ LED แดงกะพริบตอนประตูเปิด (ms)
 #define FIREBASE_UPDATE_MS    3000   // อัปเดต Firebase ทุก 3 วินาที
 #define WIFI_RETRY_MS         5000   // ลอง reconnect WiFi ทุก 5 วินาที
 #define TELEGRAM_COOLDOWN_MS  3000   // ป้องกันส่ง Telegram ถี่เกินไป (ms)

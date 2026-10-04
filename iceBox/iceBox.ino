@@ -100,7 +100,8 @@ bool sensorClear() {
 // LED หน้าตู้
 //   เขียว  = ว่าง
 //   เหลือง = มีพัสดุ
-//   แดง    = ตู้เต็ม หรือ ประตูรับพัสดุเข้าเปิด
+//   แดง    = ตู้เต็ม
+//   ประตูรับพัสดุเข้าเปิด = แดงกะพริบ (เขียว/เหลืองตามจำนวนพัสดุ)
 //   ประตูนำพัสดุออกเปิด = เขียวติด เหลืองดับ แดงกะพริบ
 //
 // ledTicker เรียกทุก LED_BLINK_MS และอ่าน sensor กับประตูเองโดยตรง
@@ -115,7 +116,10 @@ void updateLEDs() {
 
   bool green = !hasParcel && !full;
   bool yellow = hasParcel;
-  bool red = full || digitalRead(PIN_INPUT_DOOR) == LOW;
+  bool red = full;
+
+  if (digitalRead(PIN_INPUT_DOOR) == LOW)
+    red = blink;
 
   if (digitalRead(PIN_OUTPUT_DOOR) == LOW) {
     green = true;
