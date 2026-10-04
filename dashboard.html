@@ -921,7 +921,7 @@
 
     <div class="connection-bar">
         <span class="connection-dot offline" id="connDot"></span>
-        <span id="connText">กำลังเชื่อมต่อ...</span>
+        <span id="connText">หน้าเว็บ: กำลังเชื่อมต่อฐานข้อมูล (Firebase)...</span>
     </div>
 
     <!-- สถานะ WiFi ของ ESP32 — ดูจากเวลาที่ ESP32 ส่งข้อมูลล่าสุด -->
@@ -986,7 +986,7 @@
                 <div class="info-card-value" id="lastUpdate">--:--:--</div>
             </div>
             <div class="info-card">
-                <div class="info-card-label">การเชื่อมต่อ</div>
+                <div class="info-card-label">ฐานข้อมูล</div>
                 <div class="info-card-value" id="connMode">Firebase Realtime</div>
             </div>
         </div>
@@ -1225,7 +1225,7 @@
                 initFirebaseApp(firebaseUrl, apiKey, projectId);
             } catch (err) {
                 console.error('Firebase init error:', err);
-                setOffline('เชื่อมต่อไม่สำเร็จ: ' + err.message);
+                setOffline('หน้าเว็บ: เชื่อมต่อฐานข้อมูล (Firebase) ไม่สำเร็จ — ' + err.message);
             }
         }
 
@@ -1273,7 +1273,7 @@
                 prevStatus = status;
             }, (error) => {
                 console.error('Firebase listen error:', error);
-                setOffline('ข้อผิดพลาด: ' + error.message);
+                setOffline('หน้าเว็บ: อ่านข้อมูลจากฐานข้อมูล (Firebase) ไม่ได้ — ' + error.message);
             });
 
             // Listen to events (most recent 10)
@@ -1445,7 +1445,7 @@
 
         function setOnline() {
             el.connDot.className = 'connection-dot';
-            el.connText.textContent = 'เชื่อมต่อแล้ว — Real-time (อัปเดตทันที)';
+            el.connText.textContent = 'หน้าเว็บ: เชื่อมต่อฐานข้อมูล (Firebase) แล้ว — ข้อมูลอัปเดตทันที';
             el.connMode.textContent = 'Firebase ✓';
             el.connMode.style.color = 'var(--accent-green)';
             el.btnConnect.textContent = '✓ เชื่อมต่อแล้ว';
@@ -1454,7 +1454,7 @@
 
         function setOffline(msg) {
             el.connDot.className = 'connection-dot offline';
-            el.connText.textContent = msg || 'ไม่สามารถเชื่อมต่อได้';
+            el.connText.textContent = msg || 'หน้าเว็บ: เชื่อมต่อฐานข้อมูล (Firebase) ไม่ได้';
             el.connMode.textContent = 'Offline';
             el.connMode.style.color = 'var(--accent-red)';
             el.btnConnect.textContent = 'ลองเชื่อมต่อใหม่';
