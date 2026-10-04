@@ -924,6 +924,12 @@
         <span id="connText">กำลังเชื่อมต่อ...</span>
     </div>
 
+    <!-- สถานะ WiFi ของ ESP32 — ดูจากเวลาที่ ESP32 ส่งข้อมูลล่าสุด -->
+    <div class="connection-bar" style="padding-top:0">
+        <span class="connection-dot offline" id="espDot"></span>
+        <span id="espText">ESP32: กำลังตรวจสอบ...</span>
+    </div>
+
     <div class="container" style="display:none">
 
         <!-- Main Gauge -->
@@ -1117,6 +1123,13 @@
         let prevCount = -1;
         let prevStatus = -1;
 
+        // ESP32 online/offline
+        // ESP32 ส่งสถานะทุก ~3 วินาที — เงียบนานกว่านี้ถือว่า WiFi หลุดหรือไฟดับ
+        const ESP_OFFLINE_MS = 20000;
+        let espLastSeen = 0;       // เวลาที่ ESP32 ส่งข้อมูลล่าสุด (ms) — 0 = ยังไม่รู้
+        let serverTimeOffset = 0;  // นาฬิกา Firebase − นาฬิกาเครื่องนี้ (ms) กันนาฬิกาเครื่องไม่ตรง
+        let fbConnected = false;   // Dashboard ต่อ Firebase อยู่หรือไม่
+
         // Stats state
         let rawStatsData = {};  // { "YYYY-MM-DD": { count, resets } }
         let currentTab = 'daily';
@@ -1135,6 +1148,8 @@
             ledGreen: document.getElementById('ledGreen'),
             connDot: document.getElementById('connDot'),
             connText: document.getElementById('connText'),
+            espDot: document.getElementById('espDot'),
+            espText: document.getElementById('espText'),
             lastUpdate: document.getElementById('lastUpdate'),
             connMode: document.getElementById('connMode'),
             logList: document.getElementById('logList'),
@@ -1244,6 +1259,9 @@
                 const leds = data.leds ?? {};
                 const doors = data.doors ?? {};
 
+                espLastSeen = (data.lastUpdate ?? 0) * 1000;
+                renderEspStatus();
+
                 // Update UI
                 updateParcelCount(count);
                 updateStatus(status, statusTextStr);
@@ -1272,13 +1290,59 @@
                 renderStats();
             });
 
+            // Dashboard ต่อ Firebase อยู่หรือไม่ + ส่วนต่างนาฬิกา — ใช้ตัดสินสถานะ ESP32
+            const connectedRef = db.ref('.info/connected');
+            connectedRef.on('value', (snapshot) => {
+                fbConnected = snapshot.val() === true;
+                renderEspStatus();
+            });
+            const offsetRef = db.ref('.info/serverTimeOffset');
+            offsetRef.on('value', (snapshot) => {
+                serverTimeOffset = snapshot.val() || 0;
+            });
+
             // Store unsubscribe function
             unsubscribe = () => {
                 parcelRef.off();
                 eventsRef.off();
                 statsRef.off();
+                connectedRef.off();
+                offsetRef.off();
             };
         }
+
+        // =============================================
+        // สถานะ WiFi ของ ESP32
+        // ESP32 เขียน lastUpdate ทุกครั้งที่ส่งข้อมูล — ถ้าค่านี้เก่าเกิน ESP_OFFLINE_MS
+        // แปลว่า ESP32 ส่งข้อมูลไม่ได้ (WiFi หลุด / ไม่มีเน็ต / ไฟดับ)
+        // =============================================
+        function renderEspStatus() {
+            if (!fbConnected) {
+                // Dashboard เองยังไม่ได้ข้อมูลใหม่ — บอกไม่ได้ว่า ESP32 เป็นอย่างไร
+                el.espDot.className = 'connection-dot offline';
+                el.espText.textContent = 'ESP32: กำลังตรวจสอบ...';
+                return;
+            }
+
+            const online = espLastSeen > 0 &&
+                Date.now() + serverTimeOffset - espLastSeen < ESP_OFFLINE_MS;
+
+            if (online) {
+                el.espDot.className = 'connection-dot';
+                el.espText.textContent = 'ESP32: ออนไลน์ — เชื่อม WiFi อยู่';
+            } else if (espLastSeen > 0) {
+                const seen = new Date(espLastSeen).toLocaleString('th-TH', {
+                    day: 'numeric', month: 'short',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                el.espDot.className = 'connection-dot offline';
+                el.espText.textContent = 'ESP32: ออฟไลน์ — WiFi หลุดหรือไฟดับ (ส่งข้อมูลล่าสุด ' + seen + ')';
+            } else {
+                el.espDot.className = 'connection-dot offline';
+                el.espText.textContent = 'ESP32: ออฟไลน์ — ยังไม่ได้รับข้อมูล';
+            }
+        }
+        setInterval(renderEspStatus, 1000);
 
         // =============================================
         // UI Updates
