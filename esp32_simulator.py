@@ -241,7 +241,7 @@ def simulate_parcel_arrive():
 
 
 def simulate_box_full():
-    """จำลอง: ตู้เต็ม (Max sensor triggered)"""
+    """จำลอง: ตู้เต็ม (Photo sensor ถูกบังค้างครบ 10 วินาที)"""
     global box_status
     box_status = 2
 
@@ -413,8 +413,8 @@ def main():
         print(f"  จำนวนพัสดุ: {parcel_count} ชิ้น")
         print(f"  ประตูเข้า: {'🔴 เปิด' if door_input else '🟢 ปิด'}  |  ประตูออก: {'🔴 เปิด' if door_output else '🟢 ปิด'}")
         print(f"{'─' * 40}")
-        print("  [1] 📦 พัสดุมาส่ง (Counter sensor)")
-        print("  [2] 🔴 ตู้เต็ม (Max sensor)")
+        print("  [1] 📦 พัสดุมาส่ง (Photo sensor)")
+        print("  [2] 🔴 ตู้เต็ม (Photo sensor ถูกบังค้าง)")
         print("  [3] ✅ รีเซ็ต (Reset button)")
         print("  [4] 🟢 เริ่มระบบใหม่ (Boot)")
         print("  [5] 🎬 จำลองอัตโนมัติ (Auto demo)")
